@@ -1,15 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ozzy-cox/automatic-message-system/config"
+	"github.com/ozzy-cox/automatic-message-system/internal/handlers"
 	"log"
 	"net/http"
 )
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "helloworld")
-}
 
 func main() {
 	cfg, err := config.Load()
@@ -17,7 +13,9 @@ func main() {
 		log.Fatalf("Could not load config: %v", err)
 	}
 
-	http.HandleFunc("/", handler)
+	http.HandleFunc("GET /sent-messages", handlers.HandleGetSentMessages)
+	http.HandleFunc("POST /toggle-worker", handlers.HandleToggleWorker)
+
 	addr := ":" + cfg.HTTP.Port
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Could not start server: %v", err)
