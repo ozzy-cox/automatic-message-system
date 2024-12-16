@@ -6,15 +6,13 @@ import (
 )
 
 func main() {
-	ticker := time.NewTicker(2 * time.Minute)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			do()
-		}
+	for ; true; <-ticker.C {
+		do()
 	}
+
 }
 
 func do() {
