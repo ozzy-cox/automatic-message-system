@@ -5,12 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ozzy-cox/automatic-message-system/config"
-	_ "github.com/ozzy-cox/automatic-message-system/docs"
-	"github.com/ozzy-cox/automatic-message-system/internal/db"
-	"github.com/ozzy-cox/automatic-message-system/internal/handlers"
-
 	"github.com/go-chi/chi"
+	_ "github.com/ozzy-cox/automatic-message-system/docs"
+	"github.com/ozzy-cox/automatic-message-system/internal/api"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/swaggo/http-swagger/v2"
 )
 
@@ -29,25 +27,30 @@ import (
 // @host		localhost:8080
 // @BasePath	/
 func main() {
-	cfg, err := config.GetAPIConfig()
+	cfg, err := api.GetAPIConfig()
 	if err != nil {
 		log.Fatalf("Could not load config: %v", err)
 	}
 
-	_, err = db.GetConnection(cfg.Database)
+	dbConn, err := db.NewConnection(cfg.Database)
 	if err != nil {
 		log.Fatalf("Could not load database: %v", err)
 	}
 
-	addr := ":" + cfg.HTTP.Port
-	swaggerAddr := cfg.HTTP.Host + addr
+	service := api.Service{
+		Config: cfg,
+		DB:     dbConn,
+	}
+
+	addr := ":" + cfg.Port
+	swaggerAddr := cfg.Host + addr
 	r := chi.NewRouter()
+
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", swaggerAddr)),
 	))
-
-	r.Get("/sent-messages", handlers.HandleGetSentMessages)
-	r.Post("/toggle-worker", handlers.HandleToggleWorker)
+	r.Get("/sent-messages", service.HandleGetSentMessages)
+	r.Post("/toggle-worker", service.HandleToggleWorker)
 
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Could not start server: %v", err)

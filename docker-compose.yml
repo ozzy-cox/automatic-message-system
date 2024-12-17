@@ -19,11 +19,38 @@ services:
     volumes: 
       - redis_data:/data
 
+  kafka:
+    image: 'bitnami/kafka:latest'
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:29093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://192.167.1.102:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-  http-server:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8090:8080"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: kafka:29092
+
+
+  api:
     build:
       context: .
-      dockerfile: Dockerfile.http
+      dockerfile: Dockerfile.api
     ports:
       - "8080:8080"
     environment:
@@ -34,17 +61,18 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=automatic_message_system
       - DB_SSLMODE=disable
-      - WORKER_URL=worker:8000
+      - PRODUCER_URL=http://producer:8001
     depends_on:
       - postgres
     restart: unless-stopped
 
-  worker:
+  producer:
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: Dockerfile.producer
     environment:
-      - WORKER_INTERVAL=5s
+      - PORT=8001
+      - PRODUCER_INTERVAL=200ms
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
@@ -54,10 +82,48 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_GROUP_ID=message-consumer
+      - KAFKA_TOPIC=messages
     depends_on:
       - postgres
       - redis
+      - kafka
     restart: unless-stopped
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=automatic_message_system
+      - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REQUEST_URL=http://test:3000
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_GROUP_ID=message-consumer
+      - KAFKA_TOPIC=messages
+    depends_on:
+      - test
+      - postgres
+      - redis
+      - kafka
+    restart: unless-stopped
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
 
 volumes:
   postgres_data:

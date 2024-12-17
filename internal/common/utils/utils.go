@@ -1,4 +1,4 @@
-package config
+package utils
 
 import (
 	"os"
@@ -6,29 +6,14 @@ import (
 	"time"
 )
 
-type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-type RedisConfig struct {
-	Host string
-	Port string
-	DB   int
-}
-
-func getEnvStringWithDefault(key, defaultValue string) string {
+func GetEnvStringWithDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func getEnvDurationWithDefault(key string, defaultValue time.Duration) time.Duration {
+func GetEnvDurationWithDefault(key string, defaultValue time.Duration) time.Duration {
 	if value := os.Getenv(key); value != "" {
 		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
@@ -37,7 +22,7 @@ func getEnvDurationWithDefault(key string, defaultValue time.Duration) time.Dura
 	return defaultValue
 }
 
-func getEnvIntWithDefault(key string, defaultValue int) int {
+func GetEnvIntWithDefault(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if parsedValue, err := strconv.Atoi(value); err == nil {
 			return parsedValue
@@ -45,4 +30,3 @@ func getEnvIntWithDefault(key string, defaultValue int) int {
 	}
 	return defaultValue
 }
-

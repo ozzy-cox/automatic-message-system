@@ -1,8 +1,6 @@
-package types
+package api
 
-import (
-	"github.com/ozzy-cox/automatic-message-system/internal/db"
-)
+import "github.com/ozzy-cox/automatic-message-system/internal/common/db"
 
 type ToggleRequest struct {
 	// NOTE This should be the desired status of the worker

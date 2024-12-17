@@ -1,26 +1,32 @@
-package handlers
+package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/ozzy-cox/automatic-message-system/config"
-	"github.com/ozzy-cox/automatic-message-system/internal/db"
-	"github.com/ozzy-cox/automatic-message-system/internal/types"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/redis/go-redis/v9"
 )
+
+type Service struct {
+	Config *APIConfig
+	Cache  *redis.Client
+	DB     *sql.DB
+}
 
 // HandleGetSentMessages godoc
 //
 //	@Summary		Get sent messages
 //	@Description	Retrieves a list of sent messages from the system
 //	@Produce		json
-//	@Success		200	{object}	types.SentMessagesResponse
+//	@Success		200	{object}	SentMessagesResponse
 //	@Router			/sent-messages [get]
-func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
+func (service *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO Add pagination
-	rows, err := db.DbConnection.Query("SELECT * FROM messages LIMIT 20")
+	rows, err := service.DB.Query("SELECT * FROM messages LIMIT 20")
 	if err != nil {
 		fmt.Println("Error getting messages from db")
 	}
@@ -43,7 +49,7 @@ func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 		sentMessages = append(sentMessages, msg)
 	}
 
-	response := types.SentMessagesResponse{
+	response := SentMessagesResponse{
 		SentMessages: sentMessages,
 	}
 
@@ -58,19 +64,19 @@ func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 //	@Tags			worker
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		types.ToggleRequest	true	"Worker status toggle request"
-//	@Success		200		{object}	types.ToggleResponse
+//	@Param			request	body		ToggleRequest	true	"Worker status toggle request"
+//	@Success		200		{object}	ToggleResponse
 //	@Failure		400		{string}	string	"Invalid request body"
 //	@Router			/toggle-worker [post]
-func HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
-	var request types.ToggleRequest
+func (service *Service) HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
+	var request ToggleRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.WorkerStatus == nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	workerUrl := config.APIConfigObject.WorkerUrl + "/toggle-worker"
+	workerUrl := service.Config.ProducerURL + "/toggle-worker"
 
 	jsonBody, _ := json.Marshal(request)
 
