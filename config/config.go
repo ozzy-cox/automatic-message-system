@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type Config struct {
 	HTTP     HTTPConfig
 	Worker   WorkerConfig
 	Database DatabaseConfig
+	Cache    RedisConfig
 }
 
 type HTTPConfig struct {
@@ -29,6 +31,12 @@ type DatabaseConfig struct {
 	SSLMode  string
 }
 
+type RedisConfig struct {
+	Host string
+	Port string
+	DB   int
+}
+
 func Load() (*Config, error) {
 	config := &Config{
 		HTTP: HTTPConfig{
@@ -45,6 +53,11 @@ func Load() (*Config, error) {
 			Password: getEnvStringWithDefault("DB_PASSWORD", "postgres"),
 			DBName:   getEnvStringWithDefault("DB_NAME", "automatic_message_system"),
 			SSLMode:  getEnvStringWithDefault("DB_SSLMODE", "disable"),
+		},
+		Cache: RedisConfig{
+			Host: getEnvStringWithDefault("REDIS_HOST", "localhost"),
+			Port: getEnvStringWithDefault("REDIS_PORT", "6379"),
+			DB:   getEnvIntWithDefault("REDIS_DB", 0),
 		}}
 
 	return config, nil
@@ -61,6 +74,15 @@ func getEnvDurationWithDefault(key string, defaultValue time.Duration) time.Dura
 	if value := os.Getenv(key); value != "" {
 		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
+		}
+	}
+	return defaultValue
+}
+
+func getEnvIntWithDefault(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if parsedValue, err := strconv.Atoi(value); err == nil {
+			return parsedValue
 		}
 	}
 	return defaultValue
