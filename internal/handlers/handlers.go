@@ -24,7 +24,7 @@ func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO Add pagination
 	rows, err := dbConn.Query("SELECT * FROM messages LIMIT 20")
 	if err != nil {
-		fmt.Println("Error conneting to db.")
+		fmt.Println("Error getting messages from db")
 	}
 
 	sentMessages := make([]db.Message, 0)
@@ -39,7 +39,6 @@ func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 			&msg.CreatedAt,
 		)
 		if err != nil {
-			fmt.Println("err", err)
 			http.Error(w, "Failed to scan messages", http.StatusInternalServerError)
 			return
 		}
@@ -62,10 +61,5 @@ func HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("request", request)
-
 	isWorkerRunning.Store(*request.WorkerStatus)
-	fmt.Println(isWorkerRunning.Load())
-
-	fmt.Println("Handle toggle worker")
 }
