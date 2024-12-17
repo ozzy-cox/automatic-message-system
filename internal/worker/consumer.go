@@ -12,7 +12,8 @@ import (
 	"github.com/ozzy-cox/automatic-message-system/internal/db"
 )
 
-const requestURL = "https://webhook.site/5770a369-afb4-47dc-8d6b-d3da51530c81"
+// const requestURL = "https://webhook.site/5770a369-afb4-47dc-8d6b-d3da51530c81"
+const requestURL = "http://localhost:3000"
 
 func sendMessage(msg db.Message) {
 	jsonBody, err := json.Marshal(msg)

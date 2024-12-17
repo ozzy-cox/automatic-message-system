@@ -1,6 +1,6 @@
 CREATE TABLE messages (
 	id SERIAL PRIMARY KEY,
-	content TEXT,
+	content VARCHAR(1023),
 	to_ VARCHAR(1023),
 	sending_status  BOOLEAN DEFAULT false,
 	sent_at TIMESTAMP NULL DEFAULT NULL,

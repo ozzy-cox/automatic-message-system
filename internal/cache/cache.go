@@ -8,7 +8,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func NewClient(cfg config.RedisConfig) (*redis.Client, error) {
+var CacheClient *redis.Client
+
+func GetClient(cfg config.RedisConfig) (*redis.Client, error) {
+	if CacheClient != nil {
+		return CacheClient, nil
+	}
 	addr := cfg.Host + ":" + cfg.Port
 	rdb := redis.NewClient(&redis.Options{
 		Addr: addr,
@@ -21,6 +26,7 @@ func NewClient(cfg config.RedisConfig) (*redis.Client, error) {
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}
-	return rdb, nil
+	CacheClient = rdb
 
+	return rdb, nil
 }

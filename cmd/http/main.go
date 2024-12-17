@@ -10,17 +10,15 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load()
+	cfg, err := config.GetAPIConfig()
 	if err != nil {
 		log.Fatalf("Could not load config: %v", err)
 	}
 
-	dbConn, err := db.NewConnection(cfg.Database)
+	_, err = db.GetConnection(cfg.Database)
 	if err != nil {
 		log.Fatalf("Could not load database: %v", err)
 	}
-
-	handlers.Initialize(dbConn)
 
 	http.HandleFunc("GET /sent-messages", handlers.HandleGetSentMessages)
 	http.HandleFunc("POST /toggle-worker", handlers.HandleToggleWorker)

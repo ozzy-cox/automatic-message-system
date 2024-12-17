@@ -34,6 +34,7 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=automatic_message_system
       - DB_SSLMODE=disable
+      - WORKER_URL=worker:8000
     depends_on:
       - postgres
     restart: unless-stopped

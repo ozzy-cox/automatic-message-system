@@ -1,28 +1,19 @@
 package handlers
 
 import (
-	"database/sql"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync/atomic"
 
+	"github.com/ozzy-cox/automatic-message-system/config"
 	"github.com/ozzy-cox/automatic-message-system/internal/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/types"
 )
 
-var (
-	dbConn          *sql.DB
-	isWorkerRunning atomic.Bool
-)
-
-func Initialize(_dbConn *sql.DB) {
-	dbConn = _dbConn
-}
-
 func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO Add pagination
-	rows, err := dbConn.Query("SELECT * FROM messages LIMIT 20")
+	rows, err := db.DbConnection.Query("SELECT * FROM messages LIMIT 20")
 	if err != nil {
 		fmt.Println("Error getting messages from db")
 	}
@@ -61,5 +52,10 @@ func HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isWorkerRunning.Store(*request.WorkerStatus)
+	workerUrl := config.APIConfigObject.WorkerUrl + "/toggle-worker"
+
+	jsonBody, _ := json.Marshal(request)
+
+	http.Post(workerUrl, "application/json", bytes.NewReader(jsonBody))
+
 }

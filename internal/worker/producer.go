@@ -20,8 +20,10 @@ func ProduceMessages(wg *sync.WaitGroup, ctx context.Context, chanMessage chan d
 			wg.Done()
 			return
 		case <-ticker.C:
-
-			rows, err := dbConn.Query("SELECT * FROM messages LIMIT $1 OFFSET $2", limit, offset)
+			if !ProducerOnStatus.Load() {
+				continue
+			}
+			rows, err := db.DbConnection.Query("SELECT * FROM messages LIMIT $1 OFFSET $2", limit, offset)
 			if err != nil {
 			}
 
@@ -43,5 +45,4 @@ func ProduceMessages(wg *sync.WaitGroup, ctx context.Context, chanMessage chan d
 			}
 		}
 	}
-
 }
