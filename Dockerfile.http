@@ -1,7 +1,9 @@
 FROM golang:1.23-alpine AS base
 WORKDIR /app
+RUN go install github.com/swaggo/swag/cmd/swag@latest
 COPY go.mod go.sum ./
 COPY . .
+RUN swag init -g ./cmd/http/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o /http-server ./cmd/http
 
 FROM scratch

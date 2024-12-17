@@ -11,6 +11,13 @@ import (
 	"github.com/ozzy-cox/automatic-message-system/internal/types"
 )
 
+// HandleGetSentMessages godoc
+//
+//	@Summary		Get sent messages
+//	@Description	Retrieves a list of sent messages from the system
+//	@Produce		json
+//	@Success		200	{object}	types.SentMessagesResponse
+//	@Router			/sent-messages [get]
 func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO Add pagination
 	rows, err := db.DbConnection.Query("SELECT * FROM messages LIMIT 20")
@@ -44,6 +51,17 @@ func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// HandleToggleWorker godoc
+//
+//	@Summary		Toggle worker status
+//	@Description	Toggles the message sending worker on/off
+//	@Tags			worker
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		types.ToggleRequest	true	"Worker status toggle request"
+//	@Success		200		{object}	types.ToggleResponse
+//	@Failure		400		{string}	string	"Invalid request body"
+//	@Router			/toggle-worker [post]
 func HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
 	var request types.ToggleRequest
 

@@ -5,3 +5,4 @@ docker-compose.yml
 Dockerfile.http
 Dockerfile.worker
 *.md
+docs
