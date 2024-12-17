@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	HTTP   HTTPConfig
-	Worker WorkerConfig
+	HTTP     HTTPConfig
+	Worker   WorkerConfig
+	Database DatabaseConfig
 }
 
 type HTTPConfig struct {
@@ -19,6 +20,15 @@ type WorkerConfig struct {
 	Interval time.Duration
 }
 
+type DatabaseConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
+}
+
 func Load() (*Config, error) {
 	config := &Config{
 		HTTP: HTTPConfig{
@@ -28,7 +38,14 @@ func Load() (*Config, error) {
 		Worker: WorkerConfig{
 			Interval: getEnvDurationWithDefault("WORKER_INTERVAL", time.Second),
 		},
-	}
+		Database: DatabaseConfig{
+			Host:     getEnvStringWithDefault("DB_HOST", "localhost"),
+			Port:     getEnvStringWithDefault("DB_PORT", "5432"),
+			User:     getEnvStringWithDefault("DB_USER", "postgres"),
+			Password: getEnvStringWithDefault("DB_PASSWORD", "postgres"),
+			DBName:   getEnvStringWithDefault("DB_NAME", "automatic_message_system"),
+			SSLMode:  getEnvStringWithDefault("DB_SSLMODE", "disable"),
+		}}
 
 	return config, nil
 }

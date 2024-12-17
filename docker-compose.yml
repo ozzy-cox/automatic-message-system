@@ -1,4 +1,15 @@
 services:
+  postgres:
+    image: postgres:17.2-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=automatic_message_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   http-server:
     build:
       context: .
@@ -7,6 +18,14 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=automatic_message_system
+      - DB_SSLMODE=disable
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   worker:
@@ -15,4 +34,15 @@ services:
       dockerfile: Dockerfile.worker
     environment:
       - WORKER_INTERVAL=5s
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=automatic_message_system
+      - DB_SSLMODE=disable
+    depends_on:
+      - postgres
     restart: unless-stopped
+
+volumes:
+  postgres_data:

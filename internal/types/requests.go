@@ -1,6 +1,8 @@
 package types
 
-import "github.com/ozzy-cox/automatic-message-system/internal/models"
+import (
+	"github.com/ozzy-cox/automatic-message-system/internal/db"
+)
 
 type ToggleRequest struct {
 	// NOTE This should be the desired status of the worker
@@ -13,5 +15,6 @@ type ToggleResponse struct {
 }
 
 type SentMessagesResponse struct {
-	SentMessages []models.Message `json:"sentMessages"`
+	// TODO change the object in the response, dont use db types
+	SentMessages []db.Message `json:"sentMessages"`
 }

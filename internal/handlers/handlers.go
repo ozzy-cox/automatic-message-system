@@ -1,25 +1,49 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync/atomic"
-	"time"
 
-	"github.com/ozzy-cox/automatic-message-system/internal/models"
+	"github.com/ozzy-cox/automatic-message-system/internal/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/types"
 )
 
-var isWorkerRunning atomic.Bool
+var (
+	dbConn          *sql.DB
+	isWorkerRunning atomic.Bool
+)
+
+func Initialize(_dbConn *sql.DB) {
+	dbConn = _dbConn
+}
 
 func HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
-	sentMessages := []models.Message{
-		{ID: 1, Content: "asdf", To: "+901233453434", Sent: true, SentAt: time.Now(), CreatedAt: time.Now()},
-		{ID: 2, Content: "asdf", To: "+901233453434", Sent: true, SentAt: time.Now(), CreatedAt: time.Now()},
-		{ID: 3, Content: "asdf", To: "+901233453434", Sent: true, SentAt: time.Now(), CreatedAt: time.Now()},
-		{ID: 4, Content: "asdf", To: "+901233453434", Sent: true, SentAt: time.Now(), CreatedAt: time.Now()},
-		{ID: 5, Content: "asdf", To: "+901233453434", Sent: true, SentAt: time.Now(), CreatedAt: time.Now()},
+	// TODO Add pagination
+	rows, err := dbConn.Query("SELECT * FROM messages LIMIT 20")
+	if err != nil {
+		fmt.Println("Error conneting to db.")
+	}
+
+	sentMessages := make([]db.Message, 0)
+	for rows.Next() {
+		var msg db.Message
+		err := rows.Scan(
+			&msg.ID,
+			&msg.Content,
+			&msg.To,
+			&msg.Sent,
+			&msg.SentAt,
+			&msg.CreatedAt,
+		)
+		if err != nil {
+			fmt.Println("err", err)
+			http.Error(w, "Failed to scan messages", http.StatusInternalServerError)
+			return
+		}
+		sentMessages = append(sentMessages, msg)
 	}
 
 	response := types.SentMessagesResponse{

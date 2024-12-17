@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/ozzy-cox/automatic-message-system/config"
-	"github.com/ozzy-cox/automatic-message-system/internal/handlers"
 	"log"
 	"net/http"
+
+	"github.com/ozzy-cox/automatic-message-system/config"
+	"github.com/ozzy-cox/automatic-message-system/internal/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/handlers"
 )
 
 func main() {
@@ -12,6 +14,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not load config: %v", err)
 	}
+
+	dbConn, err := db.NewConnection(cfg.Database)
+	if err != nil {
+		log.Fatalf("Could not load database: %v", err)
+	}
+
+	handlers.Initialize(dbConn)
 
 	http.HandleFunc("GET /sent-messages", handlers.HandleGetSentMessages)
 	http.HandleFunc("POST /toggle-worker", handlers.HandleToggleWorker)
