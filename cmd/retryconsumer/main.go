@@ -13,6 +13,7 @@ import (
 	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/ozzy-cox/automatic-message-system/internal/consumer"
+	"github.com/ozzy-cox/automatic-message-system/internal/retryconsumer"
 )
 
 func main() {
@@ -36,26 +37,35 @@ func main() {
 		loggerInst.Fatalf("Could not connect to cache: %v", err)
 	}
 
-	queueClient, err := queue.NewReaderClient(cfg.Queue)
+	retryQueueReaderClient, err := queue.NewReaderClient(cfg.RetryQueue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
-	defer queueClient.Close()
+	defer retryQueueReaderClient.Close()
 	retryQueueWriterClient, err := queue.NewWriterClient(cfg.RetryQueue)
 	if err != nil {
-		loggerInst.Fatalf("Could not connect to retry-queue: %v", err)
+		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
 	defer retryQueueWriterClient.Close()
+	dlQueueWriterClient, err := queue.NewWriterClient(cfg.DLQueue)
+	if err != nil {
+		loggerInst.Fatalf("Could not connect to queue: %v", err)
+	}
+	defer dlQueueWriterClient.Close()
 
-	service := consumer.Service{
-		Config: cfg,
-		Cache:  cacheClient,
-		MessageRepository: &db.MessageRepository{
-			DB: dbConn,
+	retryService := retryconsumer.Service{
+		Service: consumer.Service{
+			Config: cfg,
+			Cache:  cacheClient,
+			MessageRepository: &db.MessageRepository{
+				DB: dbConn,
+			},
+			QueueReader:      nil,
+			RetryQueueWriter: retryQueueWriterClient,
+			Logger:           loggerInst,
 		},
-		QueueReader:      queueClient,
-		RetryQueueWriter: retryQueueWriterClient,
-		Logger:           loggerInst,
+		RetryQueueReader: retryQueueReaderClient,
+		DLQueueWriter:    dlQueueWriterClient,
 	}
 
 	stop := make(chan os.Signal, 1)
@@ -64,7 +74,7 @@ func main() {
 	wg.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go service.ConsumeMessages(ctx, &wg)
+	go retryService.ConsumeMessages(ctx, &wg)
 
 	loggerInst.Println("Consumer service started")
 	<-stop

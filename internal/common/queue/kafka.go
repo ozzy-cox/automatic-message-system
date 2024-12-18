@@ -8,10 +8,6 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-const (
-	TopicMessages = "messages"
-)
-
 type WriterClient struct {
 	writer *kafka.Writer
 }
@@ -22,7 +18,7 @@ type ReaderClient struct {
 func NewReaderClient(cfg KafkaConfig) (*ReaderClient, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  cfg.Brokers,
-		Topic:    TopicMessages,
+		Topic:    cfg.Topic,
 		MinBytes: 1,
 		MaxBytes: 10e6,
 	})
@@ -31,10 +27,11 @@ func NewReaderClient(cfg KafkaConfig) (*ReaderClient, error) {
 }
 
 func NewWriterClient(cfg KafkaConfig) (*WriterClient, error) {
-	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: cfg.Brokers,
-		Topic:   TopicMessages,
-	})
+	writer := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.Brokers...),
+		Topic:                  cfg.Topic,
+		AllowAutoTopicCreation: true,
+	}
 
 	return &WriterClient{writer: writer}, nil
 }

@@ -14,9 +14,12 @@ type ConsumerConfig struct {
 	Database   db.DatabaseConfig
 	Cache      cache.RedisConfig
 	Queue      queue.KafkaConfig
+	RetryQueue queue.KafkaConfig
+	DLQueue    queue.KafkaConfig
 	Interval   time.Duration
 	Logger     logger.Config
 	RequestURL string
+	RetryCount int
 }
 
 func GetConsumerConfig() (*ConsumerConfig, error) {
@@ -39,11 +42,23 @@ func GetConsumerConfig() (*ConsumerConfig, error) {
 			GroupID: utils.GetEnvStringWithDefault("KAFKA_GROUP_ID", "message-consumer"),
 			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC", "messages"),
 		},
+		RetryQueue: queue.KafkaConfig{
+			Brokers: queue.GetDefaultKafkaBrokers(),
+			GroupID: utils.GetEnvStringWithDefault("KAFKA_GROUP_ID", "message-consumer"),
+			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC_RETRY", "messages-retry"),
+		},
+		DLQueue: queue.KafkaConfig{
+			Brokers: queue.GetDefaultKafkaBrokers(),
+			GroupID: utils.GetEnvStringWithDefault("KAFKA_GROUP_ID", "message-consumer"),
+			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC_DLQ", "messages-dlq"),
+		},
 		Logger: logger.Config{
 			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/consumer.log"),
 			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
 		},
 		RequestURL: utils.GetEnvStringWithDefault("REQUEST_URL", "http://localhost:3000"),
+		Interval:   utils.GetEnvDurationWithDefault("RETRY_INTERVAL", time.Second*2),
+		RetryCount: utils.GetEnvIntWithDefault("RETRY_COUNT", 3),
 	}
 
 	return config, nil

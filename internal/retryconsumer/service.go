@@ -1,4 +1,4 @@
-package consumer
+package retryconsumer
 
 import (
 	"bytes"
@@ -6,50 +6,33 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"math/rand/v2"
 	"net/http"
 	"sync"
+	"time"
 
-	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
-	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
-	"github.com/redis/go-redis/v9"
+	"github.com/ozzy-cox/automatic-message-system/internal/consumer"
 )
 
 type Service struct {
-	Config            *ConsumerConfig
-	Cache             *redis.Client
-	MessageRepository db.IMessageRepository
-	QueueReader       *queue.ReaderClient
-	RetryQueueWriter  *queue.WriterClient
-	Logger            *logger.Logger
+	consumer.Service
+	RetryQueueReader *queue.ReaderClient
+	DLQueueWriter    *queue.WriterClient
 }
 
-func (s *Service) TryRequeueRetryMessage(ctx context.Context, msg queue.MessagePayload) error {
-	err := s.RetryQueueWriter.WriteMessage(ctx, msg)
-	if err != nil {
-		s.Logger.Printf("Error queueing message for retry: %v", err)
-	}
-
-	return nil
-}
-
-func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) error {
-	if rand.Float64() < 0.2 {
-		return errors.New("a random error occurred")
-	}
+func (s *Service) sendMessage(msg queue.MessagePayload) error { // TODO add context and cancellation
 
 	jsonBody, err := json.Marshal(msg)
 	if err != nil {
-		s.TryRequeueRetryMessage(ctx, msg)
 		s.Logger.Printf("Error marshaling message: %v", err)
 		return err
 	}
 	bodyReader := bytes.NewReader(jsonBody)
 
 	resp, err := http.Post(s.Config.RequestURL, "application/json", bodyReader)
-	if err != nil {
-		s.TryRequeueRetryMessage(ctx, msg)
+	if err != nil || resp.StatusCode != 200 {
 		s.Logger.Printf("Error sending message to %s: %v", s.Config.RequestURL, err)
 		return err
 	}
@@ -57,25 +40,41 @@ func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) err
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		s.TryRequeueRetryMessage(ctx, msg)
 		s.Logger.Printf("Error reading response body: %v", err)
-		return err
+		return nil
 	}
-	s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
+	// s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
 
 	err = s.MessageRepository.SetMessageSent(msg.ID)
 	if err != nil {
 		s.Logger.Printf("Failed to update message sent state: %v", err)
-		return err
+		return nil
 	}
 	return nil
+}
+
+func (s *Service) repeatSendMessage(ctx context.Context, msg queue.MessagePayload) {
+	for i := 1; i < s.Config.RetryCount; i++ {
+		jitter := (rand.Float64() * 1) - 1
+		nextWaitDuration := time.Duration(math.Pow(2, float64(i))+jitter) * s.Config.Interval
+		err := s.sendMessage(msg)
+		if err == nil {
+			return
+		}
+		s.Logger.Printf("Failed to send message retry count: %d waiting: %s", i, nextWaitDuration)
+		time.Sleep(nextWaitDuration)
+	}
+	err := s.DLQueueWriter.WriteMessage(ctx, msg)
+	if err != nil {
+		s.Logger.Fatal(err)
+	}
 }
 
 func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 	messageChan := make(chan queue.MessagePayload, 1000)
 	go func() {
 		for {
-			msg, err := s.QueueReader.ReadMessage(ctx)
+			msg, err := s.RetryQueueReader.ReadMessage(ctx)
 			if err != nil {
 				close(messageChan)
 				if errors.Is(err, context.Canceled) {
@@ -96,10 +95,7 @@ func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 				wg.Done()
 				return
 			}
-			err := s.sendMessage(ctx, msg)
-			if err != nil {
-				go s.TryRequeueRetryMessage(ctx, msg)
-			}
+			go s.repeatSendMessage(ctx, msg)
 		case <-ctx.Done():
 			for {
 				select {
@@ -108,10 +104,7 @@ func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 						wg.Done()
 						return
 					}
-					err := s.sendMessage(ctx, msg)
-					if err != nil {
-						s.TryRequeueRetryMessage(ctx, msg)
-					}
+					go s.repeatSendMessage(ctx, msg)
 				default:
 					wg.Done()
 					return

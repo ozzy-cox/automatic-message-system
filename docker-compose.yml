@@ -34,6 +34,7 @@ services:
       KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://192.167.1.102:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -115,6 +116,34 @@ services:
       - redis
       - kafka
     restart: unless-stopped
+
+  retryconsumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.retryconsumer
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=automatic_message_system
+      - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REQUEST_URL=http://test:3000
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_GROUP_ID=message-consumer
+      - KAFKA_TOPIC_RETRY=messages-retry
+      - KAFKA_TOPIC_DLQ=messages-dlq
+      - LOG_FILE=/var/log/automatic-message-system/retryconsumer.log
+    depends_on:
+      - test
+      - postgres
+      - redis
+      - kafka
+    restart: unless-stopped
+
 
   test:
     build:
