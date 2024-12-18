@@ -3,24 +3,24 @@ package consumer
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"sync"
 
+	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/redis/go-redis/v9"
 )
 
 type Service struct {
-	Config *ConsumerConfig
-	Cache  *redis.Client
-	DB     *sql.DB
-	Queue  *queue.ReaderClient
-	Logger *logger.Logger
+	Config            *ConsumerConfig
+	Cache             *redis.Client
+	MessageRepository db.IMessageRepository
+	Queue             *queue.ReaderClient
+	Logger            *logger.Logger
 }
 
 func (s *Service) sendMessage(msg queue.MessagePayload) {
@@ -42,7 +42,12 @@ func (s *Service) sendMessage(msg queue.MessagePayload) {
 		return
 	}
 	s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
-	// TODO save to db the saved messages
+
+	err = s.MessageRepository.SetMessageSent(msg.ID)
+	if err != nil {
+		s.Logger.Printf("Failed to update message sent state: %v", err) // TODO maybe add retry logic for updating db
+	}
+
 }
 
 func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {

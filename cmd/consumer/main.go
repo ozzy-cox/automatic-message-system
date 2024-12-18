@@ -43,8 +43,10 @@ func main() {
 
 	service := consumer.Service{
 		Config: cfg,
-		DB:     dbConn,
 		Cache:  cacheClient,
+		MessageRepository: &db.MessageRepository{
+			DB: dbConn,
+		},
 		Queue:  queueClient,
 		Logger: loggerInst,
 	}
