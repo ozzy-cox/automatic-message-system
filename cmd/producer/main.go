@@ -42,12 +42,16 @@ func main() {
 		panic(err)
 	}
 
+	messageRepo := db.MessageRepository{
+		DB: dbConn,
+	}
+
 	service := producer.Service{
-		Config:           cfg,
-		ProducerOnStatus: &atomic.Bool{},
-		Cache:            cacheClient,
-		DB:               dbConn,
-		Queue:            queueClient,
+		Config:            cfg,
+		ProducerOnStatus:  &atomic.Bool{},
+		Cache:             cacheClient,
+		MessageRepository: &messageRepo,
+		Queue:             queueClient,
 	}
 
 	stop := make(chan os.Signal, 1)

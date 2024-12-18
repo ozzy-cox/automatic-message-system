@@ -5,12 +5,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 
-	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/redis/go-redis/v9"
 )
@@ -22,7 +22,7 @@ type Service struct {
 	Queue  *queue.ReaderClient
 }
 
-func (service *Service) sendMessage(msg db.Message) {
+func (service *Service) sendMessage(msg queue.MessagePayload) {
 	jsonBody, err := json.Marshal(msg)
 	bodyReader := bytes.NewReader(jsonBody)
 
@@ -43,11 +43,15 @@ func (service *Service) sendMessage(msg db.Message) {
 }
 
 func (service *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
-	messageChan := make(chan db.Message, 1000)
+	messageChan := make(chan queue.MessagePayload, 1000)
 	go func() {
 		for {
 			msg, err := service.Queue.ReadMessage(ctx)
 			if err != nil {
+				close(messageChan)
+				if errors.Is(err, context.Canceled) {
+					return
+				}
 				fmt.Println("Error reading message from kafka:", err)
 				panic(err)
 			}
@@ -56,11 +60,26 @@ func (service *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup)
 	}()
 	for {
 		select {
-		case msg := <-messageChan:
+		case msg, ok := <-messageChan:
+			if !ok {
+				wg.Done()
+				return
+			}
 			service.sendMessage(msg)
 		case <-ctx.Done():
-			wg.Done()
-			return
+			for {
+				select {
+				case msg, ok := <-messageChan:
+					if !ok {
+						wg.Done()
+						return
+					}
+					service.sendMessage(msg)
+				default:
+					wg.Done()
+					return
+				}
+			}
 		}
 	}
 

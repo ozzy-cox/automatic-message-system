@@ -2,9 +2,7 @@ package api
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
@@ -12,9 +10,9 @@ import (
 )
 
 type Service struct {
-	Config *APIConfig
-	Cache  *redis.Client
-	DB     *sql.DB
+	Config            *APIConfig
+	Cache             *redis.Client
+	MessageRepository db.IMessageRepository
 }
 
 // HandleGetSentMessages godoc
@@ -26,27 +24,15 @@ type Service struct {
 //	@Router			/sent-messages [get]
 func (service *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO Add pagination
-	rows, err := service.DB.Query("SELECT * FROM messages LIMIT 20")
-	if err != nil {
-		fmt.Println("Error getting messages from db")
-	}
+	rows := service.MessageRepository.GetSentMessagesFromDb(20, 0)
 
-	sentMessages := make([]db.Message, 0)
-	for rows.Next() {
-		var msg db.Message
-		err := rows.Scan(
-			&msg.ID,
-			&msg.Content,
-			&msg.To,
-			&msg.Sent,
-			&msg.SentAt,
-			&msg.CreatedAt,
-		)
+	sentMessages := make([]SentMessage, 0)
+	for i, err := range rows {
 		if err != nil {
 			http.Error(w, "Failed to scan messages", http.StatusInternalServerError)
 			return
 		}
-		sentMessages = append(sentMessages, msg)
+		sentMessages = append(sentMessages, SentMessage(*i))
 	}
 
 	response := SentMessagesResponse{
@@ -81,5 +67,4 @@ func (service *Service) HandleToggleWorker(w http.ResponseWriter, r *http.Reques
 	jsonBody, _ := json.Marshal(request)
 
 	http.Post(workerUrl, "application/json", bytes.NewReader(jsonBody))
-
 }

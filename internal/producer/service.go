@@ -5,14 +5,24 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/redis/go-redis/v9"
 )
 
 const limit = 2
 const offsetKey = "producer_offset"
+
+type Service struct {
+	Config            *ProducerConfig
+	ProducerOnStatus  *atomic.Bool
+	Cache             *redis.Client
+	MessageRepository db.IMessageRepository
+	Queue             *queue.WriterClient
+}
 
 func (service *Service) mustGetProducerOffset() int {
 
@@ -59,20 +69,15 @@ func (service *Service) ProduceMessages(wg *sync.WaitGroup, ctx context.Context,
 				continue
 			}
 			fmt.Println("Producing", offset)
-			rows, err := service.DB.Query("SELECT * FROM messages LIMIT $1 OFFSET $2", limit, offset)
-			if err != nil {
-			}
+			messages := service.MessageRepository.GetUnsentMessagesFromDb(2, offset)
 
-			for rows.Next() {
-				var msg db.Message
-				err := rows.Scan(
-					&msg.ID,
-					&msg.Content,
-					&msg.To,
-					&msg.Sent,
-					&msg.SentAt,
-					&msg.CreatedAt,
-				)
+			for msg, err := range messages {
+				msg := queue.MessagePayload{
+					ID:        msg.ID,
+					Content:   msg.Content,
+					To:        msg.To,
+					CreatedAt: msg.CreatedAt,
+				}
 				if err != nil {
 					panic("Failed to scan messages")
 				}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -22,8 +21,8 @@ type ReaderClient struct {
 
 func NewReaderClient(cfg KafkaConfig) (*ReaderClient, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: cfg.Brokers,
-		Topic:   TopicMessages,
+		Brokers:  cfg.Brokers,
+		Topic:    TopicMessages,
 		MinBytes: 1,
 		MaxBytes: 10e6,
 	})
@@ -54,7 +53,7 @@ func (c *ReaderClient) Close() error {
 	return nil
 }
 
-func (c *WriterClient) WriteMessage(ctx context.Context, msg db.Message) error {
+func (c *WriterClient) WriteMessage(ctx context.Context, msg MessagePayload) error {
 	value, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)
@@ -66,8 +65,8 @@ func (c *WriterClient) WriteMessage(ctx context.Context, msg db.Message) error {
 	})
 }
 
-func (c *ReaderClient) ReadMessage(ctx context.Context) (db.Message, error) {
-	var message db.Message
+func (c *ReaderClient) ReadMessage(ctx context.Context) (MessagePayload, error) {
+	var message MessagePayload
 
 	msg, err := c.reader.ReadMessage(ctx)
 	if err != nil {

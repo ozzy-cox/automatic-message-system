@@ -12,7 +12,9 @@ type ToggleResponse struct {
 	WorkerStatus bool `json:"WorkerStatus"`
 }
 
+type SentMessage db.Message
+
 type SentMessagesResponse struct {
 	// TODO change the object in the response, dont use db types
-	SentMessages []db.Message `json:"sentMessages"`
+	SentMessages []SentMessage `json:"sentMessages"`
 }

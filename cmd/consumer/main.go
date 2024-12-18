@@ -37,6 +37,7 @@ func main() {
 		fmt.Printf("Could not connect to cache: %v\n", err)
 		panic(err)
 	}
+	defer queueClient.Close()
 
 	service := consumer.Service{
 		Config: cfg,
@@ -46,14 +47,13 @@ func main() {
 	}
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(stop, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go service.ConsumeMessages(ctx, &wg)
 	<-stop
-	wg.Wait()
-	queueClient.Close()
 	cancel()
+	wg.Wait()
 }
