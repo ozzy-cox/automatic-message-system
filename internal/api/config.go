@@ -3,12 +3,14 @@ package api
 import (
 	"github.com/ozzy-cox/automatic-message-system/internal/common/cache"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/utils"
 )
 
 type APIConfig struct {
 	Database    db.DatabaseConfig
 	Cache       cache.RedisConfig
+	Logger      logger.Config
 	ProducerURL string
 	Host        string
 	Port        string
@@ -16,8 +18,7 @@ type APIConfig struct {
 
 func GetAPIConfig() (*APIConfig, error) {
 	config := &APIConfig{
-		Host: utils.GetEnvStringWithDefault("HOST", "127.0.0.1"),
-		Port: utils.GetEnvStringWithDefault("PORT", "8080"),
+
 		Database: db.DatabaseConfig{
 			Host:     utils.GetEnvStringWithDefault("DB_HOST", "localhost"),
 			Port:     utils.GetEnvStringWithDefault("DB_PORT", "5432"),
@@ -31,7 +32,13 @@ func GetAPIConfig() (*APIConfig, error) {
 			Port: utils.GetEnvStringWithDefault("REDIS_PORT", "6379"),
 			DB:   utils.GetEnvIntWithDefault("REDIS_DB", 0),
 		},
+		Logger: logger.Config{
+			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/api.log"),
+			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
+		},
 		ProducerURL: utils.GetEnvStringWithDefault("PRODUCER_URL", "http://localhost:8001"),
+		Host:        utils.GetEnvStringWithDefault("HOST", "127.0.0.1"),
+		Port:        utils.GetEnvStringWithDefault("PORT", "8080"),
 	}
 
 	return config, nil

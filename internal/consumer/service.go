@@ -6,11 +6,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
 
+	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/redis/go-redis/v9"
 )
@@ -20,39 +20,43 @@ type Service struct {
 	Cache  *redis.Client
 	DB     *sql.DB
 	Queue  *queue.ReaderClient
+	Logger *logger.Logger
 }
 
-func (service *Service) sendMessage(msg queue.MessagePayload) {
+func (s *Service) sendMessage(msg queue.MessagePayload) {
 	jsonBody, err := json.Marshal(msg)
+	if err != nil {
+		s.Logger.Printf("Error marshaling message: %v", err)
+	}
 	bodyReader := bytes.NewReader(jsonBody)
 
-	resp, err := http.Post(service.Config.RequestURL, "application/json", bodyReader)
+	resp, err := http.Post(s.Config.RequestURL, "application/json", bodyReader)
 	if err != nil {
-		// TODO requeue failed messages
-		fmt.Println(err)
+		s.Logger.Printf("Error sending message to %s: %v", s.Config.RequestURL, err)
 	}
 	defer resp.Body.Close()
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		// TODO requeue failed messages
-		fmt.Println("Error reading response:", err)
+		s.Logger.Printf("Error reading response body: %v", err)
 		return
 	}
-
+	s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
+	// TODO save to db the saved messages
 }
 
-func (service *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
+func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 	messageChan := make(chan queue.MessagePayload, 1000)
 	go func() {
 		for {
-			msg, err := service.Queue.ReadMessage(ctx)
+			msg, err := s.Queue.ReadMessage(ctx)
 			if err != nil {
 				close(messageChan)
 				if errors.Is(err, context.Canceled) {
+					s.Logger.Println("Context canceled, stopping message reader")
 					return
 				}
-				fmt.Println("Error reading message from kafka:", err)
+				s.Logger.Printf("Error reading message from kafka: %v", err)
 				panic(err)
 			}
 			messageChan <- msg
@@ -62,10 +66,11 @@ func (service *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup)
 		select {
 		case msg, ok := <-messageChan:
 			if !ok {
+				s.Logger.Println("Message channel closed, stopping consumer")
 				wg.Done()
 				return
 			}
-			service.sendMessage(msg)
+			s.sendMessage(msg)
 		case <-ctx.Done():
 			for {
 				select {
@@ -74,7 +79,7 @@ func (service *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup)
 						wg.Done()
 						return
 					}
-					service.sendMessage(msg)
+					s.sendMessage(msg)
 				default:
 					wg.Done()
 					return

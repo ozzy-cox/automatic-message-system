@@ -6,13 +6,14 @@ import (
 	"net/http"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/redis/go-redis/v9"
 )
 
 type Service struct {
 	Config            *APIConfig
-	Cache             *redis.Client
 	MessageRepository db.IMessageRepository
+	Logger            *logger.Logger
 }
 
 // HandleGetSentMessages godoc
@@ -22,9 +23,9 @@ type Service struct {
 //	@Produce		json
 //	@Success		200	{object}	SentMessagesResponse
 //	@Router			/sent-messages [get]
-func (service *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
+func (s *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO Add pagination
-	rows := service.MessageRepository.GetSentMessagesFromDb(20, 0)
+	rows := s.MessageRepository.GetSentMessagesFromDb(20, 0)
 
 	sentMessages := make([]SentMessage, 0)
 	for i, err := range rows {
@@ -54,7 +55,7 @@ func (service *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Req
 //	@Success		200		{object}	ToggleResponse
 //	@Failure		400		{string}	string	"Invalid request body"
 //	@Router			/toggle-worker [post]
-func (service *Service) HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
+func (s *Service) HandleToggleWorker(w http.ResponseWriter, r *http.Request) {
 	var request ToggleRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.WorkerStatus == nil {
@@ -62,7 +63,7 @@ func (service *Service) HandleToggleWorker(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	workerUrl := service.Config.ProducerURL + "/toggle-worker"
+	workerUrl := s.Config.ProducerURL + "/toggle-worker"
 
 	jsonBody, _ := json.Marshal(request)
 

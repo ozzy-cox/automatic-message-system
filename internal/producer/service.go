@@ -2,13 +2,13 @@ package producer
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/redis/go-redis/v9"
 )
@@ -22,67 +22,76 @@ type Service struct {
 	Cache             *redis.Client
 	MessageRepository db.IMessageRepository
 	Queue             *queue.WriterClient
+	Logger            *logger.Logger
 }
 
-func (service *Service) mustGetProducerOffset() int {
+func (s *Service) mustGetProducerOffset() int {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	offset, err := service.Cache.Get(ctx, offsetKey).Result()
+	offset, err := s.Cache.Get(ctx, offsetKey).Result()
 	if err != nil {
 		if err == redis.Nil {
+			s.Logger.Println("No offset found in cache, starting from 0")
 			return 0
 		}
-		panic("Can't get producer offset from redis")
+		s.Logger.Fatalf("Failed to get producer offset from redis: %v", err)
 	}
 	offsetValue, err := strconv.Atoi(offset)
 
 	if err != nil {
-		panic("Can't get producer offset from redis")
+		s.Logger.Fatalf("Failed to parse offset value from redis: %v", err)
 	}
 
 	return offsetValue
 }
 
-func (service *Service) mustSetProducerOffset(offsetValue *int) {
+func (s *Service) mustSetProducerOffset(offsetValue *int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Second)
 	defer cancel()
 
-	_, err := service.Cache.Set(ctx, offsetKey, *offsetValue, redis.KeepTTL).Result()
+	_, err := s.Cache.Set(ctx, offsetKey, *offsetValue, redis.KeepTTL).Result()
 	if err != nil {
-		panic("Can't set producer offset to redis")
+		s.Logger.Fatalf("Failed to set producer offset in redis: %v", err)
 	}
 }
 
-func (service *Service) ProduceMessages(wg *sync.WaitGroup, ctx context.Context, ticker *time.Ticker) {
-	offset := service.mustGetProducerOffset()
+func (s *Service) ProduceMessages(wg *sync.WaitGroup, ctx context.Context, ticker *time.Ticker) {
+	offset := s.mustGetProducerOffset()
 	poffset := &offset
+
 	for {
 		select {
 		case <-ctx.Done():
-			service.mustSetProducerOffset(poffset)
+			s.Logger.Println("Context canceled, saving final offset")
+			s.mustSetProducerOffset(poffset)
 			wg.Done()
 			return
 		case <-ticker.C:
-			if !service.ProducerOnStatus.Load() {
+			if !s.ProducerOnStatus.Load() {
 				continue
 			}
-			fmt.Println("Producing", offset)
-			messages := service.MessageRepository.GetUnsentMessagesFromDb(2, offset)
+			s.Logger.Printf("Fetching messages starting at offset: %d", offset)
+			messages := s.MessageRepository.GetUnsentMessagesFromDb(2, offset)
 
 			for msg, err := range messages {
-				msg := queue.MessagePayload{
+				if err != nil {
+					s.Logger.Printf("Error scanning messages: %v", err)
+					continue
+				}
+				payload := queue.MessagePayload{
 					ID:        msg.ID,
 					Content:   msg.Content,
 					To:        msg.To,
 					CreatedAt: msg.CreatedAt,
 				}
-				if err != nil {
-					panic("Failed to scan messages")
-				}
 
-				service.Queue.WriteMessage(ctx, msg)
+				if err := s.Queue.WriteMessage(ctx, payload); err != nil {
+					s.Logger.Printf("Error writing message to queue: %v", err)
+					continue
+				}
+				s.Logger.Printf("Successfully queued message ID: %d for recipient: %s", payload.ID, payload.To)
 				(*poffset)++
 			}
 		}

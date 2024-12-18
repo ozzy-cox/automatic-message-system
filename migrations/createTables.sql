@@ -2,7 +2,7 @@ CREATE TABLE messages (
 	id SERIAL PRIMARY KEY,
 	content VARCHAR(1023),
 	to_ VARCHAR(1023),
-	sending_status  BOOLEAN DEFAULT false,
+	is_sent  BOOLEAN DEFAULT false,
 	sent_at TIMESTAMP NULL DEFAULT NULL,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

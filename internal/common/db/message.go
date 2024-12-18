@@ -11,7 +11,7 @@ type MessageRepository struct {
 }
 
 func (r *MessageRepository) GetUnsentMessagesFromDb(limit, offset int) iter.Seq2[*Message, error] {
-	rows, err := r.DB.Query("SELECT * FROM messages WHERE sending_status is false LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := r.DB.Query("SELECT * FROM messages WHERE is_sent is false LIMIT $1 OFFSET $2", limit, offset)
 	return func(yield func(*Message, error) bool) {
 		if err != nil {
 			if !yield(nil, fmt.Errorf("Error reading unsent messages from db: %s\n", err)) {

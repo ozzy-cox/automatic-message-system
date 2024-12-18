@@ -5,6 +5,7 @@ import (
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/cache"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/utils"
 )
@@ -14,13 +15,12 @@ type ConsumerConfig struct {
 	Cache      cache.RedisConfig
 	Queue      queue.KafkaConfig
 	Interval   time.Duration
-	Port       string
+	Logger     logger.Config
 	RequestURL string
 }
 
 func GetConsumerConfig() (*ConsumerConfig, error) {
 	config := &ConsumerConfig{
-		RequestURL: utils.GetEnvStringWithDefault("REQUEST_URL", "http://localhost:3000"),
 		Database: db.DatabaseConfig{
 			Host:     utils.GetEnvStringWithDefault("DB_HOST", "localhost"),
 			Port:     utils.GetEnvStringWithDefault("DB_PORT", "5432"),
@@ -39,6 +39,11 @@ func GetConsumerConfig() (*ConsumerConfig, error) {
 			GroupID: utils.GetEnvStringWithDefault("KAFKA_GROUP_ID", "message-consumer"),
 			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC", "messages"),
 		},
+		Logger: logger.Config{
+			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/consumer.log"),
+			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
+		},
+		RequestURL: utils.GetEnvStringWithDefault("REQUEST_URL", "http://localhost:3000"),
 	}
 
 	return config, nil

@@ -9,6 +9,7 @@ import (
 	_ "github.com/ozzy-cox/automatic-message-system/docs"
 	"github.com/ozzy-cox/automatic-message-system/internal/api"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/swaggo/http-swagger/v2"
 )
 
@@ -32,14 +33,22 @@ func main() {
 		log.Fatalf("Could not load config: %v", err)
 	}
 
+	loggerInst, err := logger.NewLogger(cfg.Logger)
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: ", err)
+	}
+
 	dbConn, err := db.NewConnection(cfg.Database)
 	if err != nil {
-		log.Fatalf("Could not load database: %v", err)
+		loggerInst.Fatalf("Could not load database: %v", err)
 	}
 
 	service := api.Service{
 		Config: cfg,
-		DB:     dbConn,
+		MessageRepository: &db.MessageRepository{
+			DB: dbConn,
+		},
+		Logger: loggerInst,
 	}
 
 	addr := ":" + cfg.Port
@@ -53,6 +62,6 @@ func main() {
 	r.Post("/toggle-worker", service.HandleToggleWorker)
 
 	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("Could not start server: %v", err)
+		loggerInst.Fatalf("Could not start server: %v", err)
 	}
 }

@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,6 +27,19 @@ func GetEnvIntWithDefault(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if parsedValue, err := strconv.Atoi(value); err == nil {
 			return parsedValue
+		}
+	}
+	return defaultValue
+}
+
+func GetEnvBoolWithDefault(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		value = strings.ToLower(strings.TrimSpace(value))
+		switch value {
+		case "true":
+			return true
+		case "false":
+			return false
 		}
 	}
 	return defaultValue
