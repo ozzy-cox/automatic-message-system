@@ -14,7 +14,7 @@ import (
 )
 
 func (s *Service) handleMessage(ctx context.Context, msg queue.MessagePayload) {
-	for i := 1; i < s.Config.RetryCount; i++ {
+	for i := 0; i < s.Config.RetryCount; i++ {
 		jitter := (rand.Float64() * 1) - 1
 		nextWaitDuration := time.Duration(math.Pow(2, float64(i))+jitter) * s.Config.Interval
 		err := s.sendMessage(ctx, msg)
