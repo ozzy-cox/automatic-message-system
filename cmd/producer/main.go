@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/producer"
@@ -37,7 +38,10 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go service.ProduceMessages(ctx, &wg)
+	service.ProducerOnStatus.Store(true)
+	ticker := time.NewTicker(cfg.Interval)
+	defer ticker.Stop()
+	go service.ProduceMessages(ctx, &wg, ticker.C)
 
 	http.HandleFunc("POST /toggle-worker", service.HandleToggleProducer)
 	addr := ":" + cfg.Port

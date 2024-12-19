@@ -14,7 +14,7 @@ type Service struct {
 	ProducerOnStatus  *atomic.Bool
 	Cache             *redis.Client
 	MessageRepository db.MessageRepository
-	Queue             *queue.WriterClient
+	Queue             queue.WriterClient
 	Logger            *logger.Logger
 }
 
@@ -22,7 +22,7 @@ func NewProducerService(
 	config *ProducerConfig,
 	cache *redis.Client,
 	messageRepository db.MessageRepository,
-	queue *queue.WriterClient,
+	queue queue.WriterClient,
 	logger *logger.Logger,
 ) *Service {
 	return &Service{

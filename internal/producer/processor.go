@@ -6,11 +6,7 @@ import (
 	"time"
 )
 
-func (s *Service) ProduceMessages(ctx context.Context, wg *sync.WaitGroup) {
-	s.ProducerOnStatus.Store(true)
-	ticker := time.NewTicker(s.Config.Interval)
-	defer ticker.Stop()
-
+func (s *Service) ProduceMessages(ctx context.Context, wg *sync.WaitGroup, ticker <-chan time.Time) {
 	offset := s.mustGetProducerOffset()
 	poffset := &offset
 
@@ -21,7 +17,7 @@ func (s *Service) ProduceMessages(ctx context.Context, wg *sync.WaitGroup) {
 			s.mustSetProducerOffset(poffset)
 			wg.Done()
 			return
-		case <-ticker.C:
+		case <-ticker:
 			if !s.ProducerOnStatus.Load() {
 				continue
 			}

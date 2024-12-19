@@ -11,9 +11,9 @@ type Service struct {
 	Config            *ConsumerConfig
 	Cache             *redis.Client
 	MessageRepository db.MessageRepository
-	ReaderQClient     *queue.ReaderClient
-	WriterQClient     *queue.WriterClient
-	RetryQueueWriter  *queue.WriterClient
+	ReaderQClient     queue.ReaderClient
+	WriterQClient     queue.WriterClient
+	RetryQueueWriter  queue.WriterClient
 	Logger            *logger.Logger
 }
 
@@ -21,9 +21,9 @@ func NewConsumerService(
 	config *ConsumerConfig,
 	cache *redis.Client,
 	messageRepository db.MessageRepository,
-	readerQClient *queue.ReaderClient,
-	writerQClient *queue.WriterClient,
-	retryQueueWriter *queue.WriterClient,
+	readerQClient queue.ReaderClient,
+	writerQClient queue.WriterClient,
+	retryQueueWriter queue.WriterClient,
 	logger *logger.Logger,
 ) *Service {
 	return &Service{

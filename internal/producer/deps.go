@@ -14,7 +14,7 @@ import (
 type ProducerDeps struct {
 	DBConnection      *sql.DB
 	CacheClient       *redis.Client
-	QueueWriterClient *queue.WriterClient
+	QueueWriterClient queue.WriterClient
 	Logger            *logger.Logger
 }
 
@@ -34,7 +34,7 @@ func NewProducerDeps(cfg ProducerConfig) *ProducerDeps {
 		loggerInst.Fatalf("Could not connect to cache: %v", err)
 	}
 
-	queueClient, err := queue.NewWriterClient(cfg.Queue)
+	queueClient, err := queue.NewKafkaWriterClient(cfg.Queue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}

@@ -15,9 +15,9 @@ type ConsumerDeps struct {
 	DBConnection           *sql.DB
 	CacheClient            *redis.Client
 	Logger                 *logger.Logger
-	QueueWriterClient      *queue.WriterClient
-	QueueReaderClient      *queue.ReaderClient
-	RetryQueueWriterClient *queue.WriterClient
+	QueueWriterClient      queue.WriterClient
+	QueueReaderClient      queue.ReaderClient
+	RetryQueueWriterClient queue.WriterClient
 }
 
 func NewConsumerDeps(cfg ConsumerConfig) *ConsumerDeps {
@@ -36,15 +36,15 @@ func NewConsumerDeps(cfg ConsumerConfig) *ConsumerDeps {
 		loggerInst.Fatalf("Could not connect to cache: %v", err)
 	}
 
-	queueReaderClient, err := queue.NewReaderClient(cfg.Queue)
+	queueReaderClient, err := queue.NewKafkaReaderClient(cfg.Queue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
-	queueWriterClient, err := queue.NewWriterClient(cfg.Queue)
+	queueWriterClient, err := queue.NewKafkaWriterClient(cfg.Queue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
-	retryQueueWriterClient, err := queue.NewWriterClient(cfg.RetryQueue)
+	retryQueueWriterClient, err := queue.NewKafkaWriterClient(cfg.RetryQueue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to retry-queue: %v", err)
 	}

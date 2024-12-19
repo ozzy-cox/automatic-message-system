@@ -1,7 +1,9 @@
 package db_test
 
 import (
+	"context"
 	"database/sql"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,25 +14,21 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	for _, driver := range sql.Drivers() {
-		println(driver)
-	}
+	conn, err := sql.Open("sqlite3", ":memory:")
 
-	db, err := sql.Open("sqlite3", ":memory:")
-
-	_, err = db.Exec(`
+	_, err = conn.Exec(`
 		CREATE TABLE messages (
-		    id INTEGER PRIMARY KEY AUTOINCREMENT,
-		    content TEXT,
-		    to_ TEXT,
-		    is_sent BOOLEAN DEFAULT FALSE,
-		    sent_at TIMESTAMP NULL,
-		    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			content VARCHAR(1023) CHECK(length(content) < 1023),
+			to_ VARCHAR(1023),
+			is_sent  BOOLEAN DEFAULT false,
+			sent_at TIMESTAMP NULL DEFAULT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)
 	    `)
 	require.NoError(t, err)
 
-	return db
+	return conn
 }
 
 func TestGetUnsentMessages(t *testing.T) {
@@ -119,4 +117,17 @@ func TestMarkMessageAsSentNonExistent(t *testing.T) {
 	// Try to mark non-existent message as sent
 	err := repo.MarkMessageAsSent(99999)
 	assert.Error(t, err)
+}
+
+func TestMessageMaxLength(t *testing.T) {
+	conn := setupTestDB(t)
+	defer conn.Close()
+
+	longContent := strings.Repeat("a", 1024) // One character over limit
+	_, err := conn.ExecContext(context.Background(),
+		"INSERT INTO messages (content, to_) VALUES (?, ?)",
+		longContent, "test@example.com",
+	)
+
+	assert.Error(t, err, "Expected error when content exceeds 1023 characters")
 }

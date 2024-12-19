@@ -9,14 +9,15 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type WriterClient struct {
+type KafkaWriterClient struct {
 	writer *kafka.Writer
 }
-type ReaderClient struct {
+
+type KafkaReaderClient struct {
 	reader *kafka.Reader
 }
 
-func NewReaderClient(cfg KafkaConfig) (*ReaderClient, error) {
+func NewKafkaReaderClient(cfg KafkaConfig) (*KafkaReaderClient, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  cfg.Brokers,
 		Topic:    cfg.Topic,
@@ -24,10 +25,10 @@ func NewReaderClient(cfg KafkaConfig) (*ReaderClient, error) {
 		MaxBytes: 10e6,
 	})
 
-	return &ReaderClient{reader: reader}, nil
+	return &KafkaReaderClient{reader: reader}, nil
 }
 
-func NewWriterClient(cfg KafkaConfig) (*WriterClient, error) {
+func NewKafkaWriterClient(cfg KafkaConfig) (*KafkaWriterClient, error) {
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(cfg.Brokers...),
 		Topic:                  cfg.Topic,
@@ -35,24 +36,24 @@ func NewWriterClient(cfg KafkaConfig) (*WriterClient, error) {
 		BatchTimeout:           time.Millisecond,
 	}
 
-	return &WriterClient{writer: writer}, nil
+	return &KafkaWriterClient{writer: writer}, nil
 }
 
-func (c *WriterClient) Close() error {
+func (c *KafkaWriterClient) Close() error {
 	if err := c.writer.Close(); err != nil {
 		return fmt.Errorf("failed to close writer: %w", err)
 	}
 	return nil
 }
 
-func (c *ReaderClient) Close() error {
+func (c *KafkaReaderClient) Close() error {
 	if err := c.reader.Close(); err != nil {
 		return fmt.Errorf("failed to close reader: %w", err)
 	}
 	return nil
 }
 
-func (c *WriterClient) WriteMessages(ctx context.Context, msgs ...MessagePayload) error {
+func (c *KafkaWriterClient) WriteMessages(ctx context.Context, msgs ...MessagePayload) error {
 	kafkaMessages := make([]kafka.Message, len(msgs))
 	for i, msg := range msgs {
 		value, err := json.Marshal(msg)
@@ -67,7 +68,7 @@ func (c *WriterClient) WriteMessages(ctx context.Context, msgs ...MessagePayload
 	return c.writer.WriteMessages(ctx, kafkaMessages...)
 }
 
-func (c *ReaderClient) ReadMessage(ctx context.Context) (MessagePayload, error) {
+func (c *KafkaReaderClient) ReadMessage(ctx context.Context) (MessagePayload, error) {
 	var message MessagePayload
 
 	msg, err := c.reader.ReadMessage(ctx)
