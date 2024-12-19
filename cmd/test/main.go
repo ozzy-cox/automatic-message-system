@@ -6,12 +6,23 @@ import (
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/google/uuid"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	if rand.Float64() < 0.5 {
+	errorRate := float64(0)
+	errorRateEnv := os.Getenv("ERROR_RATE")
+	if errorRateEnv != "" {
+		parsedValue, err := strconv.ParseFloat(errorRateEnv, 64)
+		if err != nil {
+			errorRate = 0
+		}
+		errorRate = parsedValue
+	}
+	if rand.Float64() < errorRate {
 		log.Printf("returned random error")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
