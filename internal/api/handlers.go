@@ -5,16 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
-	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/utils"
 )
-
-type Service struct {
-	Config            *APIConfig
-	MessageRepository db.MessageRepository
-	Logger            *logger.Logger
-}
 
 // HandleGetSentMessages godoc
 //

@@ -9,10 +9,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ozzy-cox/automatic-message-system/internal/common/cache"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
-	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
-	"github.com/ozzy-cox/automatic-message-system/internal/common/queue"
 	"github.com/ozzy-cox/automatic-message-system/internal/producer"
 )
 
@@ -22,33 +19,15 @@ func main() {
 		log.Fatalf("Could not load config: %v", err)
 	}
 
-	loggerInst, err := logger.NewLogger(cfg.Logger)
-	if err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-
-	dbConn, err := db.NewConnection(cfg.Database)
-	if err != nil {
-		loggerInst.Fatalf("Could not load config: %v", err)
-	}
-
-	cacheClient, err := cache.NewClient(cfg.Cache)
-	if err != nil {
-		loggerInst.Fatalf("Could not connect to cache: %v", err)
-	}
-
-	queueClient, err := queue.NewWriterClient(cfg.Queue)
-	if err != nil {
-		loggerInst.Fatalf("Could not connect to queue: %v", err)
-	}
-	defer queueClient.Close()
+	deps := producer.NewProducerDeps(*cfg)
+	defer deps.Cleanup()
 
 	service := producer.NewProducerService(
 		cfg,
-		cacheClient,
-		db.NewMessageRepository(dbConn),
-		queueClient,
-		loggerInst,
+		deps.CacheClient,
+		db.NewMessageRepository(deps.DBConnection),
+		deps.QueueWriterClient,
+		deps.Logger,
 	)
 
 	stop := make(chan os.Signal, 1)
@@ -63,15 +42,15 @@ func main() {
 	http.HandleFunc("POST /toggle-worker", service.HandleToggleProducer)
 	addr := ":" + cfg.Port
 	go func() {
-		loggerInst.Printf("Starting HTTP server on %s", addr)
+		deps.Logger.Printf("Starting HTTP server on %s", addr)
 		if err := http.ListenAndServe(addr, nil); err != nil {
-			loggerInst.Fatalf("HTTP server error: %v", err)
+			deps.Logger.Fatalf("HTTP server error: %v", err)
 		}
 	}()
 
-	loggerInst.Println("Producer service started")
+	deps.Logger.Println("Producer service started")
 	<-stop
-	loggerInst.Println("Shutting down...")
+	deps.Logger.Println("Shutting down...")
 	cancel()
 	wg.Wait()
 }
