@@ -22,8 +22,8 @@ func (s *Service) ProduceMessages(ctx context.Context, wg *sync.WaitGroup, ticke
 				continue
 			}
 			limit := s.Config.BatchCount
-			go s.PushMessagesToQ(ctx, limit, offset)
-			(*poffset) += limit
+			count := s.PushMessagesToQ(ctx, limit, offset)
+			(*poffset) += count
 		}
 	}
 }

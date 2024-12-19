@@ -18,8 +18,12 @@ type KafkaReaderClient struct {
 }
 
 func NewKafkaReaderClient(cfg KafkaConfig) (*KafkaReaderClient, error) {
+	conn := mustEnsureConn(cfg)
+	tryCreateTopic(conn, cfg.Topic)
+	defer conn.Close()
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  cfg.Brokers,
+		GroupID:  cfg.GroupID,
 		Topic:    cfg.Topic,
 		MinBytes: 1,
 		MaxBytes: 10e6,
@@ -29,6 +33,9 @@ func NewKafkaReaderClient(cfg KafkaConfig) (*KafkaReaderClient, error) {
 }
 
 func NewKafkaWriterClient(cfg KafkaConfig) (*KafkaWriterClient, error) {
+	conn := mustEnsureConn(cfg)
+	tryCreateTopic(conn, cfg.Topic)
+	defer conn.Close()
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(cfg.Brokers...),
 		Topic:                  cfg.Topic,
