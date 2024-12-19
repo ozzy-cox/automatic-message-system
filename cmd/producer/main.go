@@ -9,7 +9,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
-	"time"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/cache"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
@@ -43,6 +42,7 @@ func main() {
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
+	defer queueClient.Close()
 
 	service := producer.Service{
 		Config:           cfg,
@@ -57,15 +57,12 @@ func main() {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	ticker := time.NewTicker(cfg.Interval.Abs())
-	defer ticker.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	service.ProducerOnStatus.Store(true)
-	go service.ProduceMessages(&wg, ctx, ticker)
+	go service.ProduceMessages(ctx, &wg)
 
 	http.HandleFunc("POST /toggle-worker", service.HandleToggleProducer)
 	addr := ":" + cfg.Port
@@ -81,7 +78,4 @@ func main() {
 	loggerInst.Println("Shutting down...")
 	cancel()
 	wg.Wait()
-	if err := queueClient.Close(); err != nil {
-		loggerInst.Printf("Error closing queue client: %v", err)
-	}
 }

@@ -57,7 +57,37 @@ func (s *Service) mustSetProducerOffset(offsetValue *int) {
 	}
 }
 
-func (s *Service) ProduceMessages(wg *sync.WaitGroup, ctx context.Context, ticker *time.Ticker) {
+func (s *Service) PushMessagesToQ(ctx context.Context, limit, offset int) int {
+	s.Logger.Printf("Fetching messages starting at offset: %d", offset)
+	messages := s.MessageRepository.GetUnsentMessagesFromDb(limit, offset)
+
+	parsedMessages := make([]queue.MessagePayload, 0)
+	for msg, err := range messages {
+		if err != nil {
+			s.Logger.Printf("Error scanning messages: %v", err)
+			continue
+		}
+		parsedMessages = append(parsedMessages, queue.MessagePayload{
+			ID:        msg.ID,
+			Content:   msg.Content,
+			To:        msg.To,
+			CreatedAt: msg.CreatedAt,
+		})
+		s.Logger.Printf("Successfully queued message ID: %d for recipient: %s", msg.ID, msg.To)
+	}
+
+	if err := s.Queue.WriteMessages(ctx, parsedMessages...); err != nil {
+		s.Logger.Printf("Error writing messages to queue: %v", err)
+	}
+	return len(parsedMessages)
+
+}
+
+func (s *Service) ProduceMessages(ctx context.Context, wg *sync.WaitGroup) {
+	s.ProducerOnStatus.Store(true)
+	ticker := time.NewTicker(s.Config.Interval)
+	defer ticker.Stop()
+
 	offset := s.mustGetProducerOffset()
 	poffset := &offset
 
@@ -72,28 +102,9 @@ func (s *Service) ProduceMessages(wg *sync.WaitGroup, ctx context.Context, ticke
 			if !s.ProducerOnStatus.Load() {
 				continue
 			}
-			s.Logger.Printf("Fetching messages starting at offset: %d", offset)
-			messages := s.MessageRepository.GetUnsentMessagesFromDb(2, offset)
-
-			for msg, err := range messages {
-				if err != nil {
-					s.Logger.Printf("Error scanning messages: %v", err)
-					continue
-				}
-				payload := queue.MessagePayload{
-					ID:        msg.ID,
-					Content:   msg.Content,
-					To:        msg.To,
-					CreatedAt: msg.CreatedAt,
-				}
-
-				if err := s.Queue.WriteMessage(ctx, payload); err != nil {
-					s.Logger.Printf("Error writing message to queue: %v", err)
-					continue
-				}
-				s.Logger.Printf("Successfully queued message ID: %d for recipient: %s", payload.ID, payload.To)
-				(*poffset)++
-			}
+			limit := s.Config.BatchCount
+			go s.PushMessagesToQ(ctx, limit, offset)
+			(*poffset) += limit
 		}
 	}
 }

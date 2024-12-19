@@ -33,7 +33,7 @@ func GetAPIConfig() (*APIConfig, error) {
 			DB:   utils.GetEnvIntWithDefault("REDIS_DB", 0),
 		},
 		Logger: logger.Config{
-			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/api.log"),
+			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/tmp/log/automatic-message-system/api.log"),
 			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
 		},
 		ProducerURL: utils.GetEnvStringWithDefault("PRODUCER_URL", "http://localhost:8001"),

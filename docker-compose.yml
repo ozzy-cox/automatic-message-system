@@ -73,7 +73,7 @@ services:
       dockerfile: Dockerfile.producer
     environment:
       - PORT=8001
-      - PRODUCER_INTERVAL=200ms
+      - INTERVAL=500ms
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres

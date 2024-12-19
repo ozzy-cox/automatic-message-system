@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -31,6 +32,7 @@ func NewWriterClient(cfg KafkaConfig) (*WriterClient, error) {
 		Addr:                   kafka.TCP(cfg.Brokers...),
 		Topic:                  cfg.Topic,
 		AllowAutoTopicCreation: true,
+		BatchTimeout:           time.Millisecond,
 	}
 
 	return &WriterClient{writer: writer}, nil
@@ -50,16 +52,19 @@ func (c *ReaderClient) Close() error {
 	return nil
 }
 
-func (c *WriterClient) WriteMessage(ctx context.Context, msg MessagePayload) error {
-	value, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
+func (c *WriterClient) WriteMessages(ctx context.Context, msgs ...MessagePayload) error {
+	kafkaMessages := make([]kafka.Message, len(msgs))
+	for i, msg := range msgs {
+		value, err := json.Marshal(msg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal message: %w", err)
+		}
+		kafkaMessages[i] = kafka.Message{
+			Value: value,
+		}
 	}
 
-	// TODO dont serialize messages here
-	return c.writer.WriteMessages(ctx, kafka.Message{
-		Value: value,
-	})
+	return c.writer.WriteMessages(ctx, kafkaMessages...)
 }
 
 func (c *ReaderClient) ReadMessage(ctx context.Context) (MessagePayload, error) {

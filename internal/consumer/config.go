@@ -48,7 +48,7 @@ func GetConsumerConfig() (*ConsumerConfig, error) {
 			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC_RETRY", "messages-retry"),
 		},
 		Logger: logger.Config{
-			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/consumer.log"),
+			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/tmp/log/automatic-message-system/consumer.log"),
 			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
 		},
 		RequestURL: utils.GetEnvStringWithDefault("REQUEST_URL", "http://localhost:3000"),

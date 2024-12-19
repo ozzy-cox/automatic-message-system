@@ -11,12 +11,13 @@ import (
 )
 
 type ProducerConfig struct {
-	Database db.DatabaseConfig
-	Cache    cache.RedisConfig
-	Queue    queue.KafkaConfig
-	Logger   logger.Config
-	Port     string
-	Interval time.Duration
+	Database   db.DatabaseConfig
+	Cache      cache.RedisConfig
+	Queue      queue.KafkaConfig
+	Logger     logger.Config
+	Port       string
+	Interval   time.Duration
+	BatchCount int
 }
 
 func GetProducerConfig() (*ProducerConfig, error) {
@@ -40,11 +41,12 @@ func GetProducerConfig() (*ProducerConfig, error) {
 			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC", "messages"),
 		},
 		Logger: logger.Config{
-			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/producer.log"),
+			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/tmp/log/automatic-message-system/producer.log"),
 			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
 		},
-		Interval: utils.GetEnvDurationWithDefault("PRODUCER_INTERVAL", time.Second),
-		Port:     utils.GetEnvStringWithDefault("WORKER_PORT", "8001"),
+		Interval:   utils.GetEnvDurationWithDefault("INTERVAL", time.Second),
+		BatchCount: utils.GetEnvIntWithDefault("BATCH_COUNT", 1),
+		Port:       utils.GetEnvStringWithDefault("WORKER_PORT", "8001"),
 	}
 
 	return config, nil
