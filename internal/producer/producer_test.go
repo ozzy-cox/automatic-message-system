@@ -227,7 +227,6 @@ func TestEachMessageProducedOnce(t *testing.T) {
 	wg.Add(1)
 
 	ticker := make(chan time.Time, 1)
-	ticker <- time.Now()
 
 	service.ProducerOnStatus.Store(true)
 	go service.ProduceMessages(ctx, &wg, ticker)
@@ -239,7 +238,6 @@ func TestEachMessageProducedOnce(t *testing.T) {
 
 	ctx, cancel = context.WithTimeout(context.Background(), 500*time.Millisecond)
 	wg.Add(1)
-	ticker <- time.Now()
 	service.ProducerOnStatus.Store(true)
 	go service.ProduceMessages(ctx, &wg, ticker)
 	time.Sleep(200 * time.Millisecond)
