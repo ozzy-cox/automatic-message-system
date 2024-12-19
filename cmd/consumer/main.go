@@ -52,15 +52,15 @@ func main() {
 	}
 	defer retryQueueWriterClient.Close()
 
-	service := consumer.Service{
-		Config:            cfg,
-		Cache:             cacheClient,
-		MessageRepository: db.NewMessageRepository(dbConn),
-		ReaderQClient:     readQueueClient,
-		WriterQClient:     writeQueueClient,
-		RetryQueueWriter:  retryQueueWriterClient,
-		Logger:            loggerInst,
-	}
+	service := consumer.NewConsumerService(
+		cfg,
+		cacheClient,
+		db.NewMessageRepository(dbConn),
+		readQueueClient,
+		writeQueueClient,
+		retryQueueWriterClient,
+		loggerInst,
+	)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
