@@ -4,12 +4,19 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"math/rand/v2"
 	"net/http"
 
 	"github.com/google/uuid"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	if rand.Float64() < 0.5 {
+		log.Printf("returned random error")
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
 	// Log the request details
 	defer r.Body.Close()
 
