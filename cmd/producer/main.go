@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"sync/atomic"
 	"syscall"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/cache"
@@ -44,14 +43,13 @@ func main() {
 	}
 	defer queueClient.Close()
 
-	service := producer.Service{
-		Config:            cfg,
-		ProducerOnStatus:  &atomic.Bool{},
-		Cache:             cacheClient,
-		MessageRepository: db.NewMessageRepository(dbConn),
-		Queue:             queueClient,
-		Logger:            loggerInst,
-	}
+	service := producer.NewProducerService(
+		cfg,
+		cacheClient,
+		db.NewMessageRepository(dbConn),
+		queueClient,
+		loggerInst,
+	)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)

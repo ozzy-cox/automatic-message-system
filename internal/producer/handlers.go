@@ -5,6 +5,10 @@ import (
 	"net/http"
 )
 
+type toggleRequest struct {
+	WorkerStatus bool `json:"workerStatus"`
+}
+
 func (s *Service) HandleToggleProducer(w http.ResponseWriter, r *http.Request) {
 	var request toggleRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
