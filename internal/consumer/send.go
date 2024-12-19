@@ -36,7 +36,7 @@ func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) err
 	bodyReader := bytes.NewReader(jsonBody)
 
 	resp, err := http.Post(s.Config.RequestURL, "application/json", bodyReader)
-	if err != nil || resp.StatusCode != 200 {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Error sending message to %s: %v", s.Config.RequestURL, err)
 	}
 

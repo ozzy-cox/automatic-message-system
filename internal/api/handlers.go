@@ -21,7 +21,7 @@ type Service struct {
 //	@Summary		Get sent messages
 //	@Description	Retrieves a list of sent messages from the system
 //	@Produce		json
-//	@Success		200	{object}	SentMessagesResponse
+//	@Success		200	{object}	utils.JsonResponse
 //	@Router			/sent-messages [get]
 func (s *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	params := GetSentMessagesParams{
@@ -39,10 +39,12 @@ func (s *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) 
 		sentMessages = append(sentMessages, SentMessage(*i))
 	}
 
-	response := SentMessagesResponse{
-		SentMessages: sentMessages,
+	response := utils.JsonResponse{
+		Data: SentMessagesResponse{
+			SentMessages: sentMessages,
+		},
+		Message: "success",
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
