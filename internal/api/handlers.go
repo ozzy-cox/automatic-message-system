@@ -7,6 +7,7 @@ import (
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
+	"github.com/ozzy-cox/automatic-message-system/internal/common/utils"
 )
 
 type Service struct {
@@ -23,8 +24,11 @@ type Service struct {
 //	@Success		200	{object}	SentMessagesResponse
 //	@Router			/sent-messages [get]
 func (s *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
-	// TODO Add pagination
-	rows := s.MessageRepository.GetSentMessagesFromDb(20, 0)
+	params := GetSentMessagesParams{
+		Limit:  utils.GetIntParam(r, "limit", 20),
+		Offset: utils.GetIntParam(r, "offset", 0),
+	}
+	rows := s.MessageRepository.GetSentMessages(params.Limit, params.Offset)
 
 	sentMessages := make([]SentMessage, 0)
 	for i, err := range rows {

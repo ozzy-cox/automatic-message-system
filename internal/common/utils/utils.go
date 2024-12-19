@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -40,6 +41,15 @@ func GetEnvBoolWithDefault(key string, defaultValue bool) bool {
 			return true
 		case "false":
 			return false
+		}
+	}
+	return defaultValue
+}
+
+func GetIntParam(r *http.Request, key string, defaultValue int) int {
+	if val := r.URL.Query().Get(key); val != "" {
+		if parsed, err := strconv.Atoi(val); err == nil {
+			return parsed
 		}
 	}
 	return defaultValue

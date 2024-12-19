@@ -14,6 +14,11 @@ type ToggleResponse struct {
 
 type SentMessage db.Message
 
+type GetSentMessagesParams struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
 type SentMessagesResponse struct {
 	// TODO change the object in the response, dont use db types
 	SentMessages []SentMessage `json:"sentMessages"`
