@@ -20,7 +20,7 @@ type Service struct {
 	Config            *ProducerConfig
 	ProducerOnStatus  *atomic.Bool
 	Cache             *redis.Client
-	MessageRepository db.IMessageRepository
+	MessageRepository db.MessageRepository
 	Queue             *queue.WriterClient
 	Logger            *logger.Logger
 }

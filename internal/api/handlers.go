@@ -7,12 +7,11 @@ import (
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
-	"github.com/redis/go-redis/v9"
 )
 
 type Service struct {
 	Config            *APIConfig
-	MessageRepository db.IMessageRepository
+	MessageRepository db.MessageRepository
 	Logger            *logger.Logger
 }
 

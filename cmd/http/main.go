@@ -35,7 +35,7 @@ func main() {
 
 	loggerInst, err := logger.NewLogger(cfg.Logger)
 	if err != nil {
-		log.Fatalf("Failed to initialize logger: ", err)
+		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
 	dbConn, err := db.NewConnection(cfg.Database)
@@ -44,11 +44,9 @@ func main() {
 	}
 
 	service := api.Service{
-		Config: cfg,
-		MessageRepository: &db.MessageRepository{
-			DB: dbConn,
-		},
-		Logger: loggerInst,
+		Config:            cfg,
+		MessageRepository: db.NewMessageRepository(dbConn),
+		Logger:            loggerInst,
 	}
 
 	addr := ":" + cfg.Port

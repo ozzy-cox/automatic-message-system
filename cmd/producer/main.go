@@ -45,14 +45,12 @@ func main() {
 	defer queueClient.Close()
 
 	service := producer.Service{
-		Config:           cfg,
-		ProducerOnStatus: &atomic.Bool{},
-		Cache:            cacheClient,
-		MessageRepository: &db.MessageRepository{
-			DB: dbConn,
-		},
-		Queue:  queueClient,
-		Logger: loggerInst,
+		Config:            cfg,
+		ProducerOnStatus:  &atomic.Bool{},
+		Cache:             cacheClient,
+		MessageRepository: db.NewMessageRepository(dbConn),
+		Queue:             queueClient,
+		Logger:            loggerInst,
 	}
 
 	stop := make(chan os.Signal, 1)

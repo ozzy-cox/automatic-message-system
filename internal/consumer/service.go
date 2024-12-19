@@ -21,7 +21,7 @@ import (
 type Service struct {
 	Config            *ConsumerConfig
 	Cache             *redis.Client
-	MessageRepository db.IMessageRepository
+	MessageRepository db.MessageRepository
 	ReaderQClient     *queue.ReaderClient
 	WriterQClient     *queue.WriterClient
 	RetryQueueWriter  *queue.WriterClient
@@ -37,7 +37,7 @@ func (s *Service) MustSetMessageIdToCache(ctx context.Context, msgId string, msg
 }
 
 func (s *Service) RequeueMessage(ctx context.Context, msg queue.MessagePayload) error {
-	err := s.RetryQueueWriter.WriteMessage(ctx, msg)
+	err := s.RetryQueueWriter.WriteMessages(ctx, msg)
 	if err != nil {
 		s.Logger.Printf("Error queueing message for retry: %v", err)
 	}
@@ -66,7 +66,7 @@ func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) err
 	}
 	s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
 
-	err = s.MessageRepository.SetMessageSent(msg.ID)
+	err = s.MessageRepository.MarkMessageAsSent(msg.ID)
 	if err != nil {
 		s.Logger.Printf("Failed to update message sent state: %v", err)
 		return err
@@ -119,7 +119,7 @@ func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 				wg.Done()
 				return
 			}
-			go s.handleMessage(ctx, msg)
+			s.handleMessage(ctx, msg)
 		case <-ctx.Done():
 			for {
 				select {
