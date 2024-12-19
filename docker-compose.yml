@@ -9,6 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
     networks:
         - ams-network
 
@@ -63,14 +64,20 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PORT=8080
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=automatic_message_system
       - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - LOG_FILE=/tmp/log/automatic-message-system/api.log
+      - LOG_TO_STDOUT=true
       - PRODUCER_URL=http://producer:8001
+      - HOST=127.0.0.1
+      - PORT=8080
     depends_on:
       - postgres
     restart: unless-stopped
@@ -82,8 +89,6 @@ services:
       context: .
       dockerfile: Dockerfile.producer
     environment:
-      - PORT=8001
-      - INTERVAL=500ms
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
@@ -93,9 +98,14 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - LOG_FILE=/tmp/log/automatic-message-system/producer.log
+      - LOG_TO_STDOUT=true
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=message-consumer
       - KAFKA_TOPIC=messages
+      - INTERVAL=1s # TODO Change before commit
+      - BATCH_COUNT=2
+      - PRODUCER_API_PORT=8001
     depends_on:
       - postgres
       - redis
@@ -118,14 +128,17 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
-      - REQUEST_URL=http://test:3000
+      - LOG_FILE=/tmp/log/automatic-message-system/consumer.log
+      - LOG_TO_STDOUT=true
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=message-consumer
-      - RETRY_COUNT=1
       - KAFKA_TOPIC=messages
       - KAFKA_TOPIC_RETRY=messages-retry
+      # Below is the URL that's used for testing now it's connected to the local test client 
+      # with configurable error rate, you can insert a webhook URL here.
+      - REQUEST_URL=http://testclient:3000 
     depends_on:
-      - test
+      - testclient
       - postgres
       - redis
       - kafka
@@ -147,15 +160,17 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
-      - REQUEST_URL=http://test:3000
+      - LOG_FILE=/tmp/log/automatic-message-system/retryconsumer.log
+      - LOG_TO_STDOUT=true
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=message-consumer
-      - RETRY_COUNT=3
       - KAFKA_TOPIC=messages-retry
       - KAFKA_TOPIC_RETRY=messages-dlq
-      - LOG_FILE=/var/log/automatic-message-system/retryconsumer.log
+      - REQUEST_URL=http://testclient:3000
+      - RETRY_INTERVAL=3
+      - RETRY_COUNT=3
     depends_on:
-      - test
+      - testclient
       - postgres
       - redis
       - kafka
@@ -173,6 +188,8 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    networks:
+        - ams-network
 
 
 networks:

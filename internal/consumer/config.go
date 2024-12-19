@@ -53,8 +53,8 @@ func GetConsumerConfig() (*ConsumerConfig, error) {
 			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC_RETRY", "messages-retry"),
 		},
 		RequestURL: utils.GetEnvStringWithDefault("REQUEST_URL", "http://localhost:3000"),
-		Interval:   utils.GetEnvDurationWithDefault("RETRY_INTERVAL", time.Second*2),
-		RetryCount: utils.GetEnvIntWithDefault("RETRY_COUNT", 3),
+		Interval:   utils.GetEnvDurationWithDefault("RETRY_INTERVAL", time.Second*2), // Relevant only if it's a retrying consumer
+		RetryCount: utils.GetEnvIntWithDefault("RETRY_COUNT", 1),                     // Relevant only if it's a retrying consumer
 	}
 
 	return config, nil
