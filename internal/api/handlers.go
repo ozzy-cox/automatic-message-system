@@ -10,11 +10,16 @@ import (
 
 // HandleGetSentMessages godoc
 //
-//	@Summary		Get sent messages
-//	@Description	Retrieves a list of sent messages from the system
-//	@Produce		json
-//	@Success		200	{object}	utils.JsonResponse
-//	@Router			/sent-messages [get]
+// @Summary      Get sent messages
+// @Description  Retrieves a list of sent messages from the system
+// @Tags         messages
+// @Accept       json
+// @Produce      json
+// @Param        limit  query     integer  false  "Number of messages to return (default: 20)"  minimum(1)  maximum(100)
+// @Param        offset query     integer  false  "Number of messages to skip (default: 0)"     minimum(0)
+// @Success      200    {object}  utils.JsonResponse{data=SentMessagesResponse}
+// @Failure      500    {object}  utils.JsonResponse{message=string}
+// @Router       /sent-messages [get]
 func (s *Service) HandleGetSentMessages(w http.ResponseWriter, r *http.Request) {
 	params := GetSentMessagesParams{
 		Limit:  utils.GetIntParam(r, "limit", 20),
