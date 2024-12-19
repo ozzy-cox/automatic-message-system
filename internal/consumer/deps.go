@@ -59,8 +59,8 @@ func NewConsumerDeps(cfg ConsumerConfig) *ConsumerDeps {
 	}
 }
 
-func (cd *ConsumerDeps) Cleanup() {
-	cd.QueueWriterClient.Close()
-	cd.QueueReaderClient.Close()
-	cd.RetryQueueWriterClient.Close()
+func (d *ConsumerDeps) Cleanup() {
+	d.QueueWriterClient.Close()
+	d.QueueReaderClient.Close()
+	d.RetryQueueWriterClient.Close()
 }

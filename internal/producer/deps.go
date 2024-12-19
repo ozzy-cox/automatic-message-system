@@ -48,8 +48,7 @@ func NewProducerDeps(cfg ProducerConfig) *ProducerDeps {
 	}
 }
 
-func (pd *ProducerDeps) Cleanup() {
-	pd.QueueWriterClient.Close()
-	cd.Logger.Println("Cleaning up")
-
+func (d *ProducerDeps) Cleanup() {
+	d.QueueWriterClient.Close()
+	d.Logger.Println("Cleaning up")
 }

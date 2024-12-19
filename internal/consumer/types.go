@@ -1,6 +1,8 @@
 package consumer
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type MessageResponse struct {
 	Message   *string `json:"message"`

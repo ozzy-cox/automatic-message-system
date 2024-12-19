@@ -30,5 +30,6 @@ func NewAPIDeps(cfg APIConfig) *APIDeps {
 	}
 }
 
-func (cd *APIDeps) Cleanup() {
+func (d *APIDeps) Cleanup() {
+	d.Logger.Println("Cleaning up")
 }
