@@ -79,7 +79,7 @@ services:
       - LOG_FILE=/tmp/log/automatic-message-system/api.log
       - LOG_TO_STDOUT=true
       - PRODUCER_URL=http://producer:8001
-      - HOST=127.0.0.1
+      - HOST=localhost
       - PORT=8080
     depends_on:
       - postgres
@@ -109,7 +109,7 @@ services:
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=message-consumer
       - KAFKA_TOPIC=messages
-      - INTERVAL=1s # TODO Change before commit
+      - INTERVAL=2m
       - BATCH_COUNT=2
       - PRODUCER_API_PORT=8001
     depends_on:
