@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"math"
 	"math/rand/v2"
 	"net/http"
@@ -22,8 +21,7 @@ type Service struct {
 	DLQueueWriter    *queue.WriterClient
 }
 
-func (s *Service) sendMessage(msg queue.MessagePayload) error { // TODO add context and cancellation
-
+func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) error { // TODO add context and cancellation
 	jsonBody, err := json.Marshal(msg)
 	if err != nil {
 		s.Logger.Printf("Error marshaling message: %v", err)
@@ -36,19 +34,22 @@ func (s *Service) sendMessage(msg queue.MessagePayload) error { // TODO add cont
 		s.Logger.Printf("Error sending message to %s: %v", s.Config.RequestURL, err)
 		return err
 	}
-	defer resp.Body.Close()
 
-	_, err = io.ReadAll(resp.Body)
+	var body consumer.MessageResponse
+	err = json.NewDecoder(resp.Body).Decode(&body)
 	if err != nil {
-		s.Logger.Printf("Error reading response body: %v", err)
-		return nil
+		s.Logger.Printf("Failed to read response from message response")
 	}
-	// s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
+	s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
 
 	err = s.MessageRepository.SetMessageSent(msg.ID)
 	if err != nil {
 		s.Logger.Printf("Failed to update message sent state: %v", err)
 		return nil
+	}
+
+	if body.MessageId != nil {
+		s.MustSetMessageIdToCache(ctx, *body.MessageId, body)
 	}
 	return nil
 }
@@ -57,7 +58,7 @@ func (s *Service) repeatSendMessage(ctx context.Context, msg queue.MessagePayloa
 	for i := 1; i < s.Config.RetryCount; i++ {
 		jitter := (rand.Float64() * 1) - 1
 		nextWaitDuration := time.Duration(math.Pow(2, float64(i))+jitter) * s.Config.Interval
-		err := s.sendMessage(msg)
+		err := s.sendMessage(ctx, msg)
 		if err == nil {
 			return
 		}

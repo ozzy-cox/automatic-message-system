@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"math/rand/v2"
 	"net/http"
 	"sync"
 
@@ -25,6 +23,14 @@ type Service struct {
 	Logger            *logger.Logger
 }
 
+func (s *Service) MustSetMessageIdToCache(ctx context.Context, msgId string, msg MessageResponse) error {
+	_, err := s.Cache.Set(ctx, msgId, msg, redis.KeepTTL).Result()
+	if err != nil {
+		s.Logger.Fatalf("Failed to set producer offset in redis: %v", err)
+	}
+	return nil
+}
+
 func (s *Service) TryRequeueRetryMessage(ctx context.Context, msg queue.MessagePayload) error {
 	err := s.RetryQueueWriter.WriteMessage(ctx, msg)
 	if err != nil {
@@ -35,31 +41,23 @@ func (s *Service) TryRequeueRetryMessage(ctx context.Context, msg queue.MessageP
 }
 
 func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) error {
-	if rand.Float64() < 0.2 {
-		return errors.New("a random error occurred")
-	}
-
 	jsonBody, err := json.Marshal(msg)
 	if err != nil {
-		s.TryRequeueRetryMessage(ctx, msg)
 		s.Logger.Printf("Error marshaling message: %v", err)
 		return err
 	}
 	bodyReader := bytes.NewReader(jsonBody)
 
 	resp, err := http.Post(s.Config.RequestURL, "application/json", bodyReader)
-	if err != nil {
-		s.TryRequeueRetryMessage(ctx, msg)
+	if err != nil || resp.StatusCode != 200 {
 		s.Logger.Printf("Error sending message to %s: %v", s.Config.RequestURL, err)
 		return err
 	}
-	defer resp.Body.Close()
 
-	_, err = io.ReadAll(resp.Body)
+	var body MessageResponse
+	err = json.NewDecoder(resp.Body).Decode(&body)
 	if err != nil {
-		s.TryRequeueRetryMessage(ctx, msg)
-		s.Logger.Printf("Error reading response body: %v", err)
-		return err
+		s.Logger.Printf("Failed to read response from message response")
 	}
 	s.Logger.Printf("Successfully sent message ID: %d to %s", msg.ID, msg.To)
 
@@ -67,6 +65,10 @@ func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) err
 	if err != nil {
 		s.Logger.Printf("Failed to update message sent state: %v", err)
 		return err
+	}
+
+	if body.MessageId != nil {
+		s.MustSetMessageIdToCache(ctx, *body.MessageId, body)
 	}
 	return nil
 }
