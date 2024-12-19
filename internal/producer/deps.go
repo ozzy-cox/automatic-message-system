@@ -38,7 +38,6 @@ func NewProducerDeps(cfg ProducerConfig) *ProducerDeps {
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
-	defer queueClient.Close()
 
 	return &ProducerDeps{
 		DBConnection:      dbConnection,

@@ -32,6 +32,7 @@ func main() {
 		log.Fatalf("Could not load config: %v", err)
 	}
 	deps := api.NewAPIDeps(*cfg)
+	defer deps.Cleanup()
 
 	service := api.NewAPIService(
 		cfg,

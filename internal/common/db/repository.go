@@ -49,7 +49,7 @@ func (r *PostgresMessageRepository) GetUnsentMessages(limit, offset int) iter.Se
 }
 
 func (r *PostgresMessageRepository) GetSentMessages(limit, offset int) iter.Seq2[*Message, error] {
-	rows, err := r.DB.Query("SELECT * FROM messages WHERE sending_status is true LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := r.DB.Query("SELECT * FROM messages WHERE is_sent is true LIMIT $1 OFFSET $2", limit, offset)
 	return func(yield func(*Message, error) bool) {
 		if err != nil {
 			if !yield(nil, fmt.Errorf("Error reading sent messages from db: %s\n", err)) {
