@@ -21,6 +21,9 @@ using different kafka topics, retry intervals and counts.
 - Config
 
 1. Start the services using Docker Compose:
+```bash
+docker-compose up -d
+```
 > This will start sending the messages to the local test client.
 >> The requests recieved can be inspected with `docker logs -f ams-testclient`
 >> Alternatively you can change the `REQUEST_URL` environment parameter of the
@@ -33,16 +36,13 @@ using different kafka topics, retry intervals and counts.
 
 4. Retry logic can be configured with `RETRY_INTERVAL` and `RETRY_COUNT` env. variables in the consumers.
 
-```bash
-docker-compose up -d
-```
 
 ### Running Tests
 ```bash
 CGO_ENABLED=1 go test -v ./...
-# CGo is required for testing, it uses sqlite and may require a gcc or clang in the bin path.
-# IMPORTANT: First run of tests may take a little bit too long (only first run 30-60 sec) since it probably builds C libraries in the background.
-# Reference: https://github.com/mattn/go-sqlite3?tab=readme-ov-file#installation
+> CGo is required for testing, it uses sqlite and may require a gcc or clang in the bin path.
+> IMPORTANT: First run of tests may take a little bit too long (only first run 30-60 sec) since it probably builds C libraries in the background.
+> Reference: https://github.com/mattn/go-sqlite3?tab=readme-ov-file#installation
 ```
 
 ### Project Structure
@@ -82,22 +82,23 @@ flowchart TB
         retry[Retry Consumer]
     end
 
-    subgraph Data Layer
-        db[(PostgreSQL)]
-        cache[(Redis)]
-        subgraph Message Queues
-            kafka1[Messages Queue]
-            kafka2[Retry Queue]
-            kafka3[DLQ]
-        end
+    subgraph DB
+    db[(PostgreSQL)]
     end
 
-    subgraph External
-        ext[External Message Service]
+    subgraph Cache
+    cache[(Redis)]
     end
+
+    subgraph Kafka
+        kafka1[Messages Queue]
+        kafka2[Retry Queue]
+        kafka3[DLQ]
+    end
+
+    ext[External Message Service]
 
     client --> api
-    client --> swagger
     api --> producer
     producer --> kafka1
     kafka1 --> consumer
@@ -120,7 +121,6 @@ flowchart TB
 ## Data Flow
 ```mermaid
 sequenceDiagram
-    participant C as Client
     participant P as Producer
     participant K as Kafka
     participant Con as Consumer
@@ -128,7 +128,6 @@ sequenceDiagram
     participant D as Database
     participant R as Redis
 
-    C->>P: Request to Send Message
     P->>D: Get Unsent Messages
     P->>K: Queue Messages
     K->>Con: Consume Message
@@ -152,7 +151,7 @@ stateDiagram-v2
     Processing --> Sent: Successful Delivery
     Processing --> RetryQueue: Failed Delivery
     RetryQueue --> Processing: Retry Attempt
-    RetryQueue --> DeadLetter: Max Retries Exceeded
+    RetryQueue --> DeadLetterQ: Max Retries Exceeded
     Sent --> [*]
-    DeadLetter --> [*]
+    DeadLetterQ --> [*]
 ```
