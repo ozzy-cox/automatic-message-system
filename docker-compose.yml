@@ -109,7 +109,9 @@ services:
       - REQUEST_URL=http://test:3000
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=message-consumer
+      - RETRY_COUNT=1
       - KAFKA_TOPIC=messages
+      - KAFKA_TOPIC_RETRY=messages-retry
     depends_on:
       - test
       - postgres
@@ -120,7 +122,7 @@ services:
   retryconsumer:
     build:
       context: .
-      dockerfile: Dockerfile.retryconsumer
+      dockerfile: Dockerfile.consumer
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -134,8 +136,9 @@ services:
       - REQUEST_URL=http://test:3000
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=message-consumer
-      - KAFKA_TOPIC_RETRY=messages-retry
-      - KAFKA_TOPIC_DLQ=messages-dlq
+      - RETRY_COUNT=3
+      - KAFKA_TOPIC=messages-retry
+      - KAFKA_TOPIC_RETRY=messages-dlq
       - LOG_FILE=/var/log/automatic-message-system/retryconsumer.log
     depends_on:
       - test

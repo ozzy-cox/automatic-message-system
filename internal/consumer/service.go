@@ -5,8 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math"
+	"math/rand/v2"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/ozzy-cox/automatic-message-system/internal/common/db"
 	"github.com/ozzy-cox/automatic-message-system/internal/common/logger"
@@ -18,7 +22,8 @@ type Service struct {
 	Config            *ConsumerConfig
 	Cache             *redis.Client
 	MessageRepository db.IMessageRepository
-	QueueReader       *queue.ReaderClient
+	ReaderQClient     *queue.ReaderClient
+	WriterQClient     *queue.WriterClient
 	RetryQueueWriter  *queue.WriterClient
 	Logger            *logger.Logger
 }
@@ -31,12 +36,11 @@ func (s *Service) MustSetMessageIdToCache(ctx context.Context, msgId string, msg
 	return nil
 }
 
-func (s *Service) TryRequeueRetryMessage(ctx context.Context, msg queue.MessagePayload) error {
+func (s *Service) RequeueMessage(ctx context.Context, msg queue.MessagePayload) error {
 	err := s.RetryQueueWriter.WriteMessage(ctx, msg)
 	if err != nil {
 		s.Logger.Printf("Error queueing message for retry: %v", err)
 	}
-
 	return nil
 }
 
@@ -50,8 +54,9 @@ func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) err
 
 	resp, err := http.Post(s.Config.RequestURL, "application/json", bodyReader)
 	if err != nil || resp.StatusCode != 200 {
-		s.Logger.Printf("Error sending message to %s: %v", s.Config.RequestURL, err)
-		return err
+		errMessage := fmt.Sprintf("Error sending message to %s: %v", s.Config.RequestURL, err)
+		s.Logger.Println(errMessage)
+		return errors.New(errMessage)
 	}
 
 	var body MessageResponse
@@ -73,23 +78,39 @@ func (s *Service) sendMessage(ctx context.Context, msg queue.MessagePayload) err
 	return nil
 }
 
+func (s *Service) handleMessage(ctx context.Context, msg queue.MessagePayload) {
+	for i := 1; i < s.Config.RetryCount; i++ {
+		jitter := (rand.Float64() * 1) - 1
+		nextWaitDuration := time.Duration(math.Pow(2, float64(i))+jitter) * s.Config.Interval
+		err := s.sendMessage(ctx, msg)
+		if err == nil {
+			return
+		}
+		s.Logger.Printf("Failed to send message retry count: %d waiting: %s", i, nextWaitDuration)
+		time.Sleep(nextWaitDuration)
+	}
+	go s.RequeueMessage(ctx, msg)
+}
+
+func (s *Service) ReadMessages(ctx context.Context, messageChan chan queue.MessagePayload) {
+	for {
+		msg, err := s.ReaderQClient.ReadMessage(ctx)
+		if err != nil {
+			close(messageChan)
+			if errors.Is(err, context.Canceled) {
+				s.Logger.Println("Context canceled, stopping message reader")
+				return
+			}
+			s.Logger.Printf("Error reading message from kafka: %v", err)
+			panic(err)
+		}
+		messageChan <- msg
+	}
+}
+
 func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 	messageChan := make(chan queue.MessagePayload, 1000)
-	go func() {
-		for {
-			msg, err := s.QueueReader.ReadMessage(ctx)
-			if err != nil {
-				close(messageChan)
-				if errors.Is(err, context.Canceled) {
-					s.Logger.Println("Context canceled, stopping message reader")
-					return
-				}
-				s.Logger.Printf("Error reading message from kafka: %v", err)
-				panic(err)
-			}
-			messageChan <- msg
-		}
-	}()
+	go s.ReadMessages(ctx, messageChan)
 	for {
 		select {
 		case msg, ok := <-messageChan:
@@ -98,10 +119,7 @@ func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 				wg.Done()
 				return
 			}
-			err := s.sendMessage(ctx, msg)
-			if err != nil {
-				go s.TryRequeueRetryMessage(ctx, msg)
-			}
+			go s.handleMessage(ctx, msg)
 		case <-ctx.Done():
 			for {
 				select {
@@ -110,10 +128,7 @@ func (s *Service) ConsumeMessages(ctx context.Context, wg *sync.WaitGroup) {
 						wg.Done()
 						return
 					}
-					err := s.sendMessage(ctx, msg)
-					if err != nil {
-						s.TryRequeueRetryMessage(ctx, msg)
-					}
+					go s.handleMessage(ctx, msg)
 				default:
 					wg.Done()
 					return

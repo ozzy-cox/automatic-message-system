@@ -36,11 +36,16 @@ func main() {
 		loggerInst.Fatalf("Could not connect to cache: %v", err)
 	}
 
-	queueClient, err := queue.NewReaderClient(cfg.Queue)
+	readQueueClient, err := queue.NewReaderClient(cfg.Queue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to queue: %v", err)
 	}
-	defer queueClient.Close()
+	defer readQueueClient.Close()
+	writeQueueClient, err := queue.NewWriterClient(cfg.Queue)
+	if err != nil {
+		loggerInst.Fatalf("Could not connect to queue: %v", err)
+	}
+	defer writeQueueClient.Close()
 	retryQueueWriterClient, err := queue.NewWriterClient(cfg.RetryQueue)
 	if err != nil {
 		loggerInst.Fatalf("Could not connect to retry-queue: %v", err)
@@ -53,7 +58,8 @@ func main() {
 		MessageRepository: &db.MessageRepository{
 			DB: dbConn,
 		},
-		QueueReader:      queueClient,
+		ReaderQClient:    readQueueClient,
+		WriterQClient:    writeQueueClient,
 		RetryQueueWriter: retryQueueWriterClient,
 		Logger:           loggerInst,
 	}

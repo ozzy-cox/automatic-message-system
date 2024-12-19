@@ -47,11 +47,6 @@ func GetConsumerConfig() (*ConsumerConfig, error) {
 			GroupID: utils.GetEnvStringWithDefault("KAFKA_GROUP_ID", "message-consumer"),
 			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC_RETRY", "messages-retry"),
 		},
-		DLQueue: queue.KafkaConfig{
-			Brokers: queue.GetDefaultKafkaBrokers(),
-			GroupID: utils.GetEnvStringWithDefault("KAFKA_GROUP_ID", "message-consumer"),
-			Topic:   utils.GetEnvStringWithDefault("KAFKA_TOPIC_DLQ", "messages-dlq"),
-		},
 		Logger: logger.Config{
 			LogFile:     utils.GetEnvStringWithDefault("LOG_FILE", "/var/log/automatic-message-system/consumer.log"),
 			LogToStdout: utils.GetEnvBoolWithDefault("LOG_TO_STDOUT", true),
