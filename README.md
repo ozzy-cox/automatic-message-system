@@ -29,7 +29,7 @@ docker-compose up -d
 >> Alternatively you can change the `REQUEST_URL` environment parameter of the
 >> consumer services in `docker-compose.yml` to inspect the requests sent at webhook.site
 
-2. Add new messages with `docker exec -i postgres psql -U postgres -d automatic_message_system -f - < migrations/insertMessages.sql`
+2. Add new messages with `docker exec -i postgres psql -U postgres -d automatic_message_system -f - < migrations/02_insertMessages.sql`
 > This will add 10 more messages to the database that will be picked up by the producer.
 
 3. In the producer `INTERVAL` and `BATCH_COUNT` env. variables can be adjusted to configure the rate of messages sent.
