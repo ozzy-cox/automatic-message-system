@@ -28,12 +28,11 @@ func (s *Service) parseMessages(messages iter.Seq2[*db.Message, error]) []queue.
 
 func (s *Service) PushMessagesToQ(ctx context.Context, limit, offset int) int {
 	s.Logger.Printf("Fetching messages starting at offset: %d", offset)
-	messages := s.MessageRepository.GetUnsentMessages(limit, offset)
+	messages := s.MessageRepository.GetMessages(limit, offset)
 	parsedMessages := s.parseMessages(messages)
 
 	if err := s.Queue.WriteMessages(ctx, parsedMessages...); err != nil {
 		s.Logger.Printf("Error writing messages to queue: %v", err)
 	}
 	return len(parsedMessages)
-
 }

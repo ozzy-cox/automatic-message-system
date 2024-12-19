@@ -16,11 +16,11 @@ func NewMessageRepository(db *sql.DB) MessageRepository {
 	}
 }
 
-func (r *PostgresMessageRepository) GetUnsentMessages(limit, offset int) iter.Seq2[*Message, error] {
-	rows, err := r.DB.Query("SELECT * FROM messages WHERE is_sent is false LIMIT $1 OFFSET $2", limit, offset)
+func (r *PostgresMessageRepository) GetMessages(limit, offset int) iter.Seq2[*Message, error] {
+	rows, err := r.DB.Query("SELECT * FROM messages ORDER BY id LIMIT $1 OFFSET $2 ", limit, offset)
 	return func(yield func(*Message, error) bool) {
 		if err != nil {
-			if !yield(nil, fmt.Errorf("Error reading unsent messages from db: %s\n", err)) {
+			if !yield(nil, fmt.Errorf("Error reading messages from db: %s\n", err)) {
 				return
 			}
 		}

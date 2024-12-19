@@ -31,7 +31,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	return conn
 }
 
-func TestGetUnsentMessages(t *testing.T) {
+func TestGetMessages(t *testing.T) {
 	conn := setupTestDB(t)
 	defer conn.Close()
 
@@ -47,12 +47,12 @@ func TestGetUnsentMessages(t *testing.T) {
 	require.NoError(t, err)
 
 	messages := make([]*db.Message, 0)
-	for msg, err := range repo.GetUnsentMessages(10, 0) {
+	for msg, err := range repo.GetMessages(10, 0) {
 		require.NoError(t, err)
 		messages = append(messages, msg)
 	}
 
-	assert.Len(t, messages, 2)
+	assert.Len(t, messages, 3)
 	assert.False(t, messages[0].Sent)
 	assert.False(t, messages[1].Sent)
 }

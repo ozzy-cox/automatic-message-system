@@ -22,7 +22,7 @@ type MockMessageRepository struct {
 	mock.Mock
 }
 
-func (m *MockMessageRepository) GetUnsentMessages(limit, offset int) iter.Seq2[*db.Message, error] {
+func (m *MockMessageRepository) GetMessages(limit, offset int) iter.Seq2[*db.Message, error] {
 	args := m.Called(limit, offset)
 	return args.Get(0).(iter.Seq2[*db.Message, error])
 }
@@ -128,7 +128,7 @@ func TestProduceMessagesAsync(t *testing.T) {
 		{ID: 2, Content: "Test2", To: "456", CreatedAt: &now},
 	}
 
-	mockRepo.On("GetUnsentMessages", mock.Anything, mock.Anything).Return(sliceToIter(messages))
+	mockRepo.On("GetMessages", mock.Anything, mock.Anything).Return(sliceToIter(messages))
 	mockQueue.On("WriteMessages", mock.Anything, mock.Anything).Return(nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -171,7 +171,7 @@ func TestProducerToggle(t *testing.T) {
 		{ID: 2, Content: "Test2", To: "234", CreatedAt: &now},
 	}
 
-	mockRepo.On("GetUnsentMessages", mock.Anything, mock.Anything).Return(sliceToIter(messages))
+	mockRepo.On("GetMessages", mock.Anything, mock.Anything).Return(sliceToIter(messages))
 	mockQueue.On("WriteMessages", mock.Anything, mock.Anything).Return(nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3000*time.Millisecond)
@@ -218,7 +218,7 @@ func TestEachMessageProducedOnce(t *testing.T) {
 		{ID: 2, Content: "Test2", To: "234", CreatedAt: &now},
 	}
 
-	mockRepo.On("GetUnsentMessages", mock.Anything, mock.Anything).Return(sliceToIter(messages))
+	mockRepo.On("GetMessages", mock.Anything, mock.Anything).Return(sliceToIter(messages))
 	mockQueue.On("WriteMessages", mock.Anything, mock.Anything).Return(nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
@@ -232,7 +232,7 @@ func TestEachMessageProducedOnce(t *testing.T) {
 	service.ProducerOnStatus.Store(true)
 	go service.ProduceMessages(ctx, &wg, ticker)
 	time.Sleep(200 * time.Millisecond)
-	mockRepo.AssertCalled(t, "GetUnsentMessages", 2, 0)
+	mockRepo.AssertCalled(t, "GetMessages", 2, 0)
 
 	cancel()
 	wg.Wait()
@@ -244,8 +244,8 @@ func TestEachMessageProducedOnce(t *testing.T) {
 	go service.ProduceMessages(ctx, &wg, ticker)
 	time.Sleep(200 * time.Millisecond)
 
-	mockRepo.AssertCalled(t, "GetUnsentMessages", 2, 2)
-	mockRepo.AssertNumberOfCalls(t, "GetUnsentMessages", 2)
+	mockRepo.AssertCalled(t, "GetMessages", 2, 2)
+	mockRepo.AssertNumberOfCalls(t, "GetMessages", 2)
 
 	cancel()
 	wg.Wait()
