@@ -1,0 +1,11 @@
+FROM golang:1.23-alpine AS base
+WORKDIR /app
+COPY go.mod ./
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /test ./cmd/test
+
+
+FROM scratch
+WORKDIR /app
+COPY --from=base /test .
+ENTRYPOINT ["./test"]
