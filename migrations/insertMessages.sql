@@ -4,4 +4,4 @@ SELECT
     LPAD((1000000000 + FLOOR(random() * 8999999999))::TEXT, 10, '0') AS to_,
     FALSE AS is_sent,
     NULL AS sent_at
-FROM generate_series(1, 1000) AS gs(id);
+FROM generate_series(1, 10) AS gs(id);
