@@ -47,7 +47,7 @@ func GetProducerConfig() (*ProducerConfig, error) {
 		},
 		Interval:   utils.GetEnvDurationWithDefault("INTERVAL", time.Minute*2),
 		BatchCount: utils.GetEnvIntWithDefault("BATCH_COUNT", 1),
-		Port:       utils.GetEnvStringWithDefault("WORKER_PORT", "8001"),
+		Port:       utils.GetEnvStringWithDefault("PRODUCER_API_PORT", "8001"),
 	}
 
 	return config, nil

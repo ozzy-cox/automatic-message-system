@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:17.2-alpine
+    container_name: postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -16,6 +17,7 @@ services:
   
   redis:
     image: redis:7.4-alpine
+    container_name: redis
     restart: always
     ports:
       - "6379:6379"
@@ -58,6 +60,7 @@ services:
 
 
   api:
+    container_name: ams-api
     build:
       context: .
       dockerfile: Dockerfile.api
@@ -80,11 +83,14 @@ services:
       - PORT=8080
     depends_on:
       - postgres
+      - redis
+      - producer
     restart: unless-stopped
     networks:
         - ams-network
 
   producer:
+    container_name: ams-producer
     build:
       context: .
       dockerfile: Dockerfile.producer
@@ -115,6 +121,7 @@ services:
         - ams-network
 
   consumer:
+    container_name: ams-consumer
     build:
       context: .
       dockerfile: Dockerfile.consumer
@@ -147,6 +154,7 @@ services:
         - ams-network
 
   retryconsumer:
+    container_name: ams-retryconsumer
     build:
       context: .
       dockerfile: Dockerfile.consumer
@@ -166,6 +174,8 @@ services:
       - KAFKA_GROUP_ID=message-consumer
       - KAFKA_TOPIC=messages-retry
       - KAFKA_TOPIC_RETRY=messages-dlq
+      # Below is the URL that's used for testing now it's connected to the local test client 
+      # with configurable error rate, you can insert a webhook URL here.
       - REQUEST_URL=http://testclient:3000
       - RETRY_INTERVAL=3
       - RETRY_COUNT=3
@@ -180,11 +190,12 @@ services:
 
 
   testclient:
+    container_name: ams-testclient
     build:
       context: .
       dockerfile: Dockerfile.testclient
     environment:
-      ERROR_RATE: 0.5
+      ERROR_RATE: 0.3
     ports:
       - "3000:3000"
     restart: unless-stopped
