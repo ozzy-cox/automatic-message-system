@@ -210,7 +210,7 @@ func TestProducerToggle(t *testing.T) {
 }
 
 func TestEachMessageProducedOnce(t *testing.T) {
-	service, mockRepo, mockQueue, mockRedis := setupTestService(t)
+	service, mockRepo, mockQueue, _ := setupTestService(t)
 
 	now := time.Now()
 	messages := []*db.Message{

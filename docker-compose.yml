@@ -164,10 +164,10 @@ services:
         - ams-network
 
 
-  test:
+  testclient:
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile.testclient
     environment:
       ERROR_RATE: 0.5
     ports:
